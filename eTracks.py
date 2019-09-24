@@ -26,11 +26,11 @@ W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
 def EField(r):
         #returns the electric field at position r (from Wei Lu's paper)
-        return -1.0*W*M_E/(4*EC) * r
+        return -1.0/4.0 * r
 
 def Momentum(r, dt, p_0):
         #Returns the momentum at t + dt
-        return p_0 + EC * EField(r) * dt
+        return p_0 +  EField(r) * dt
 
 def Velocity(p):
         #returns the velocity from the momentum
@@ -38,17 +38,42 @@ def Velocity(p):
 
 def GetTrajectory(r_0,p_0):
         #returns array of r v. t
-        
+        r_dat = []
+        t_dat = []
+
+        rn = r_0 # position in c/w_p
+        pn = p_0 # momentum in m_e c
+        vn = Velocity(pn) # velocity in c
+        t = 0.0
+        dt = .0001
+
+        old_r = r_0 - 1.0
+
+        while rn > old_r:
+                print("r = " + str(rn) + " c/w_p, v = ", vn)
+
+                pn = Momentum(rn, dt, pn)
+                vn = pn
+                
+                r_dat.append(rn)
+                t_dat.append(t)
+
+                old_r = rn
+                rn += vn*dt
+                t += dt
+        print("\n Turn Radius = ",rn)
+        return r_dat,t_dat        
 
 
 def main():
         #create nxn array of xi v. r, with values of the electric field
-        n = 20
-        r = np.linspace(0,1,n)
-        xi = np.linspace(0,1,n)
-        E_dat = 20 * [0]
+        r_dat, t_dat = GetTrajectory(0.8,0.3)
         
-        for i in range(0,20):
-                E_dat[i] = 20 * [EField(r[i])]
-        plotTracks.plot(E_dat)
+        n = len(r_dat)
+
+        E_dat = n * [0]
+        
+        for i in range(n):
+                E_dat[i] = n * [EField(r_dat[i])]
+        plotTracks.plot(r_dat, t_dat, E_dat)
 main()

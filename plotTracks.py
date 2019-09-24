@@ -5,8 +5,15 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sea
 import matplotlib.cm as cm
-def plot(E):
+def plot(r,t,E):
         
         plt.style.use('seaborn-poster')
-        sea.heatmap(E, cmap = "YlGnBu")
+        #ax1 = sea.heatmap(E, cmap = "YlGnBu")
+        
+        #ax2 = ax1.twinx()
+
+        plt.plot(t,r)
+        plt.xlabel("time (1/w_p")
+        plt.ylabel("radius (c/w_p)")
+        plt.title("Electron Radial Trajectory")
         plt.show()
