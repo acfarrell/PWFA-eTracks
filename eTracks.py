@@ -44,7 +44,7 @@ def GetTrajectory(r_0,p_0):
         pn = p_0 # momentum in m_e c
         vn = Velocity(pn) # velocity in c
         t = 0.0 # start time in 1/w_p
-        dt = .0001 # time step in 1/w_p
+        dt = .01 # time step in 1/w_p
 
         old_r = r_0 - 1.0
         
@@ -79,7 +79,7 @@ def main():
         #Get number of data points
         n = len(r_dat)
         #Create list of E values for each transverse position
-        E_dat = list([EField(r) for r in r_dat]) 
+        E_dat = [[EField(r) for r in r_dat] for t in t_dat] 
         #Plot the trajectory
         plotTracks.plot(r_dat, t_dat, E_dat)
 main()
