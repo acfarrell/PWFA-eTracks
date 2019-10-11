@@ -6,6 +6,9 @@
 import sys
 import numpy as np
 import plotTracks 
+import h5py as h5
+import matplotlib.pyplot as plt
+import matplotlib.colors as col
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
@@ -60,7 +63,26 @@ def GetTrajectory(r_0,p_0):
   print("\n Turn Radius = ",rn)
   return r_dat,t_dat        
 
+def getEfromSim():
+  f = h5.File("simulated_data/fields/e2-000066.h5","r")
+  datasetNames = [n for n in f.keys()] #Two Datasets: AXIS and e2
+  E_dat = f['e2'][:]
+  E_dat = E_dat.astype(float)
+  a1_bounds = f['AXIS']['AXIS1']#.astype(float)
+  a2_bounds = f['AXIS']['AXIS2']#.astype(float)
+  
+  a1_dat = np.linspace(a1_bounds[0],a1_bounds[1],len(E_dat[0]))
+  a2_dat = np.linspace(a2_bounds[0],a2_bounds[1],len(E_dat))
 
+  fig, ax = plt.subplots()
+  colors = ax.pcolormesh(a1_dat,a2_dat,E_dat,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=E_dat.min(),vmax=E_dat.max()),cmap="RdBu_r")
+  cbar = fig.colorbar(colors,ax=ax)
+  
+  cbar.set_label('Electric Field ($m_e c\omega_p / e$)')
+  ax.set_xlabel('z ($c/\omega_p$)')
+  ax.set_ylabel('r ($c/\omega_p$)')
+  ax.set_title('Transverse Electric Field from Simulation')
+  plt.show()
 def main():
   #Get initial position and momentum from user input:
   r_0 = float(input("Initial radius (c/w_p): "))
@@ -74,4 +96,5 @@ def main():
   E_dat = [[-1.0*EField(r) for t in t_dat] for r in r_dat] 
   #Plot the trajectory
   plotTracks.plot(r_dat, t_dat, E_dat)
-main()
+#main()
+getEfromSim()

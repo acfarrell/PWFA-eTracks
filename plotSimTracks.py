@@ -33,12 +33,12 @@ def get_data(fname):
 get_data('simulated_data/TRACKS_data_Med_X2.txt')
 
 def animate(i, x, y, line, text):
-  x_dat = x[:i] #select data range to display in frame
-  y_dat = y[:i]
+  x_dat = x[:i*10] #select data range to display in frame
+  y_dat = y[:i*10]
   #update line
   line.set_data(x_dat,y_dat)
   #update time stamp
-  text.set_text("t = "+str(t[i])+" $1/\omega_p$")
+  text.set_text("t = "+str(t[i*10])+" $1/\omega_p$")
 def plot_r_v_xi():
   fig, ax = plt.subplots()
   ax.plot(xi,r,'k')
@@ -64,7 +64,7 @@ def plot_E_v_r():
   def animateEvr(i):
     animate(i,r,E_r,line,text)
 
-  ani = animation.FuncAnimation(fig,animateEvr,frames=len(r),interval=1,repeat=True)
+  ani = animation.FuncAnimation(fig,animateEvr,frames=int(len(r)/10.0),interval=1,repeat=True)
   plt.show()
 
 get_data('simulated_data/TRACKS_data_Min_X2.txt')
