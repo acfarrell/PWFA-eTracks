@@ -42,7 +42,7 @@ def EField(r,z,SHMmodel):
   else:
     zDex = find_nearest_index(z_sim, z)
     rDex = find_nearest_index(r_sim, r)
-    return E_sim[rDex,zDex]
+    return -E_sim[rDex,zDex]
 
 def Momentum(r, z, dt, p_0,model):
   #Returns the momentum at t + dt, in units of m_e 
@@ -63,7 +63,7 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
   vn = Velocity(pn) # velocity in c
   t = 0.0 # start time in 1/w_p
   dt = .001 # time step in 1/w_p
-  zn = GetInitialZ(z_0) 
+  zn = GetInitialZ(z_0,r_0) 
   print("\n Initial z = ",zn)
   
   old_r = r_0 - 1.0
@@ -92,12 +92,13 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
   print("\n Turn Radius = ",turnRad)
   return r_dat,z_dat,t_dat        
 
-def GetInitialZ(z_0):
+def GetInitialZ(z_0,r_0):
   if z_0 == -1:
     nhalf = int(len(E_sim[0])/2)
-    halfE = E_sim[:,nhalf:]
-    mindex = np.argwhere(halfE == np.min(halfE))[0,1] + nhalf
-    return z_sim[mindex]
+    r0dex = find_nearest_index(r_sim, r_0)
+    halfE = E_sim[r0dex,nhalf:]
+    mindex = np.argwhere(halfE == np.min(halfE))[0] + nhalf
+    return z_sim[mindex][0]
   else:
     return z_0
 
@@ -115,6 +116,8 @@ def main():
   p_0 = float(input("Initial transverse momentum (m_e c): "))        
   z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
   Model = bool(input("Use SHM Model (True/False): "))
+  if Model:
+    print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
   r_dat, z_dat, t_dat = GetTrajectory(r_0,p_0,z_0,Model)
   #Get number of data points

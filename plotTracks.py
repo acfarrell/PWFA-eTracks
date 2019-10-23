@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sea
 import matplotlib.cm as cm
+import plotSimTracks
 
 def plot(r,z,t,E,r_sim,z_sim,SHM):
   plt.style.use('seaborn-poster')
@@ -30,5 +31,14 @@ def plot(r,z,t,E,r_sim,z_sim,SHM):
     
     ax.plot(z,r,'k')
 
+  plt.xlim(z_sim[0], z_sim[-1])
+  #z_OSIRIS, r_OSIRIS = plotSimTracks.get_zr()
+  #ax.plot(z_OSIRIS, r_OSIRIS, 'k--')
   ax.set_title("Electron Radial Trajectory")
+  if SHM:
+    model = "SHM"
+  else:
+    model = "simE"
+  fn = model + "_"+str(r[0]) +".png"
+  plt.savefig(fn,transparent=True)
   plt.show()
