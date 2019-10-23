@@ -76,10 +76,11 @@ def GetTrajectory(r_0,p_0,SHM):
   zn = GetInitialZ() 
   print("Initial z = ",zn)
   old_r = r_0 - 1.0
+  turnRad = r_0
         
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
-  while rn > old_r:
+  while rn > 0:
 
   #Determine Momentum and velocity at this time and position
     pn = Momentum(rn, zn, dt, pn,SHM)
@@ -90,12 +91,14 @@ def GetTrajectory(r_0,p_0,SHM):
     t_dat.append(t)
     z_dat.append(zn)
     #print("z = ", zn)
+    if rn > turnRad:
+      turnRad = rn
+
     #Add the distance traveled in dt to r, increase t by dt
-    old_r = rn
     zn += dt
     rn += vn*dt
     t += dt
-  print("\n Turn Radius = ",rn)
+  print("\n Turn Radius = ",turnRad)
   return r_dat,z_dat,t_dat        
 
 def GetInitialZ():
