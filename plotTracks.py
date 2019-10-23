@@ -10,16 +10,16 @@ import matplotlib.cm as cm
 def plot(r,z,t,E,r_sim,z_sim,SHM):
   plt.style.use('seaborn-poster')
 
-  fig, ax = plt.subplots(figsize=(10,10))
+  fig, ax = plt.subplots()
   #Make color axis of electric field
   if SHM:
     colors = ax.contourf(t,r,E,levels=100,cmap="YlGnBu",alpha=0.5)
     ax.plot(t,r,'k')
   else:
-    #colors = ax.pcolormesh(z_sim,r_sim,np.transpose(E),norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=E.min(),vmax=E.max()),cmap="RdBu_r")
-    #cbar = fig.colorbar(colors,ax=ax)
+    colors = ax.pcolormesh(z_sim,r_sim,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+    cbar = fig.colorbar(colors,ax=ax)
   
-    #cbar.set_label('Electric Field ($m_e c\omega_p / e$)')
+    cbar.set_label('Electric Field ($m_e c\omega_p / e$)')
     ax.set_xlabel('z ($c/\omega_p$)')
     ax.set_ylabel('r ($c/\omega_p$)')
     ax.set_title('Transverse Electric Field from Simulation')

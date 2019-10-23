@@ -29,17 +29,7 @@ def getEfromSim():
   
   z_dat = np.linspace(a1_bounds[0],a1_bounds[1],len(E_dat[0]))
   r_dat = np.linspace(a2_bounds[0],a2_bounds[1],len(E_dat))
-
   
-#  fig, ax = plt.subplots()
-#  colors = ax.pcolormesh(z_dat,r_dat,E_dat,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=E_dat.min(),vmax=E_dat.max()),cmap="RdBu_r")
-#  cbar = fig.colorbar(colors,ax=ax)
-#  
-#  cbar.set_label('Electric Field ($m_e c\omega_p / e$)')
-#  ax.set_xlabel('z ($c/\omega_p$)')
-#  ax.set_ylabel('r ($c/\omega_p$)')
-#  ax.set_title('Transverse Electric Field from Simulation')
-  #plt.show()
   return r_dat, z_dat, E_dat
 
 r_sim, z_sim, E_sim = getEfromSim()
@@ -52,7 +42,7 @@ def EField(r,z,SHMmodel):
   else:
     zDex = find_nearest_index(z_sim, z)
     rDex = find_nearest_index(r_sim, r)
-    return E_sim[rDex][zDex]
+    return E_sim[rDex,zDex]
 
 def Momentum(r, z, dt, p_0,model):
   #Returns the momentum at t + dt, in units of m_e 
@@ -62,7 +52,7 @@ def Velocity(p):
   #returns the velocity from the momentum, in units of c
   return p
 
-def GetTrajectory(r_0,p_0,SHM):
+def GetTrajectory(r_0,p_0,z_0,SHM):
   #returns array of r v. t
   r_dat = []
   z_dat = []
@@ -73,8 +63,9 @@ def GetTrajectory(r_0,p_0,SHM):
   vn = Velocity(pn) # velocity in c
   t = 0.0 # start time in 1/w_p
   dt = .001 # time step in 1/w_p
-  zn = GetInitialZ() 
-  print("Initial z = ",zn)
+  zn = GetInitialZ(z_0) 
+  print("\n Initial z = ",zn)
+  
   old_r = r_0 - 1.0
   turnRad = r_0
         
@@ -95,15 +86,20 @@ def GetTrajectory(r_0,p_0,SHM):
       turnRad = rn
 
     #Add the distance traveled in dt to r, increase t by dt
-    zn += dt
+    zn -= dt
     rn += vn*dt
     t += dt
   print("\n Turn Radius = ",turnRad)
   return r_dat,z_dat,t_dat        
 
-def GetInitialZ():
-  mindex = np.argwhere(E_sim == np.min(E_sim))
-  return z_sim[mindex[0][0]]
+def GetInitialZ(z_0):
+  if z_0 == -1:
+    nhalf = int(len(E_sim[0])/2)
+    halfE = E_sim[:,nhalf:]
+    mindex = np.argwhere(halfE == np.min(halfE))[0,1] + nhalf
+    return z_sim[mindex]
+  else:
+    return z_0
 
 def find_nearest_index(array,value):
     idx = np.searchsorted(array, value, side="left")
@@ -117,8 +113,10 @@ def main():
   #Get initial position and momentum from user input:
   r_0 = float(input("Initial radius (c/w_p): "))
   p_0 = float(input("Initial transverse momentum (m_e c): "))        
+  z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
+  Model = bool(input("Use SHM Model (True/False): "))
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat = GetTrajectory(r_0,p_0,False)
+  r_dat, z_dat, t_dat = GetTrajectory(r_0,p_0,z_0,Model)
   #Get number of data points
   #n = len(r_dat)
   #Create list of E values for each transverse position
