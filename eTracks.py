@@ -33,12 +33,12 @@ def getEfromSim():
   return r_dat, z_dat, E_dat
 
 r_sim, z_sim, E_sim = getEfromSim()
-
 def EField(r,z,SHMmodel):
   #SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
   #SHMmodel = false returns the simulated data from OSIRIS
   if SHMmodel:
-    return -1.0/4.0 * r
+    E = -1.0/4.0 * r
+    return E
   else:
     zDex = find_nearest_index(z_sim, z)
     rDex = find_nearest_index(r_sim, r)
@@ -121,5 +121,9 @@ def main():
   #n = len(r_dat)
   #Create list of E values for each transverse position
   #Plot the trajectory
-  plotTracks.plot(r_dat,z_dat, t_dat, E_sim, r_sim,z_sim,False)
+  if (Model == True):
+    E_dat = [[-1*EField(r,z,True) for z in z_dat] for r in r_dat]
+  else:
+    E_dat = E_sim
+  plotTracks.plot(r_dat,z_dat, t_dat, E_dat, r_sim,z_sim,Model)
 main()
