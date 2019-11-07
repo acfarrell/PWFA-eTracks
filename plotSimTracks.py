@@ -32,12 +32,12 @@ def get_data(fname):
       B.append(float(row[7]))
 get_data('simulated_data/TRACKS_data_Med_X2.txt')
 
-def get_zr():
-#  fig, ax = plt.subplots()
-#  ax.plot(z,r)
-#  plt.xlim(860,870)
+def get_xir():
+  #fig, ax = plt.subplots()
+ # ax.plot(xi,r)
+  #plt.xlim(860,870)
 #  plt.show()
-  return z,r
+  return xi,r
 
 def animate(i, x, y, line, text):
   x_dat = x[:i*10] #select data range to display in frame
@@ -71,6 +71,6 @@ def plot_E_v_r():
   def animateEvr(i):
     animate(i,r,E_r,line,text)
 
-  ani = animation.FuncAnimation(fig,animateEvr,frames=int(len(r)/10.0),interval=1,repeat=True)
-  plt.show()
-
+#  ani = animation.FuncAnimation(fig,animateEvr,frames=int(len(r)/10.0),interval=1,repeat=True)
+#  plt.show()
+get_xir()

@@ -29,10 +29,10 @@ def getEfromSim():
   
   z_dat = np.linspace(a1_bounds[0],a1_bounds[1],len(E_dat[0]))
   r_dat = np.linspace(a2_bounds[0],a2_bounds[1],len(E_dat))
-  
-  return r_dat, z_dat, E_dat
+  t0 = 858.95 
+  return r_dat, z_dat, E_dat, t0
 
-r_sim, z_sim, E_sim = getEfromSim()
+r_sim, z_sim, E_sim, t0 = getEfromSim()
 def EField(r,z,SHMmodel):
   #SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
   #SHMmodel = false returns the simulated data from OSIRIS
@@ -43,7 +43,6 @@ def EField(r,z,SHMmodel):
     zDex = find_nearest_index(z_sim, z)
     rDex = find_nearest_index(r_sim, r)
     return -E_sim[rDex,zDex]
-
 def Momentum(r, z, dt, p_0,model):
   #Returns the momentum at t + dt, in units of m_e 
   return p_0 +  EField(r,z,model) * dt
@@ -54,21 +53,26 @@ def Velocity(p):
 
 def GetTrajectory(r_0,p_0,z_0,SHM):
   #returns array of r v. t
+
   r_dat = []
   z_dat = []
   t_dat = []
+  xi_dat = []
+  E_dat = []
 
   rn = r_0 # position in c/w_p
   pn = p_0 # momentum in m_e c
   vn = Velocity(pn) # velocity in c
-  t = 0.0 # start time in 1/w_p
+  t = t0 # start time in 1/w_p
   dt = .001 # time step in 1/w_p
-  zn = GetInitialZ(z_0,r_0) 
+  z0 = GetInitialZ(z_0,r_0)
+  zn = z0
   print("\n Initial z = ",zn)
   
   old_r = r_0 - 1.0
   turnRad = r_0
-        
+  xin = zn - t0
+
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   while rn > 0:
@@ -81,6 +85,8 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
     r_dat.append(rn)
     t_dat.append(t)
     z_dat.append(zn)
+    xi_dat.append(z0 - t)
+    E_dat.append( EField(rn, zn, SHM) )
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
@@ -90,7 +96,7 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
     rn += vn*dt
     t += dt
   print("\n Turn Radius = ",turnRad)
-  return r_dat,z_dat,t_dat        
+  return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
 
 def GetInitialZ(z_0,r_0):
   if z_0 == -1:
@@ -119,14 +125,10 @@ def main():
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat = GetTrajectory(r_0,p_0,z_0,Model)
+  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,p_0,z_0,Model)
   #Get number of data points
   #n = len(r_dat)
   #Create list of E values for each transverse position
   #Plot the trajectory
-  if (Model == True):
-    E_dat = [[-1*EField(r,z,True) for z in z_dat] for r in r_dat]
-  else:
-    E_dat = E_sim
-  plotTracks.plot(r_dat,z_dat, t_dat, E_dat, r_sim,z_sim,Model)
+  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, E_sim, r_sim,z_sim,Model)
 main()
