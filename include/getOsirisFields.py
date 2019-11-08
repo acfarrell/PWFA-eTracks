@@ -30,3 +30,6 @@ def transE():
 
 def longE():
   return getField('data/EField_z.h5')
+
+def phiB():
+  return getField('data/BField_phi.h5')

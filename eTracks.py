@@ -28,6 +28,7 @@ W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 r_sim, z_sim, t0 = osiris.axes()
 Er_sim = osiris.transE()
 Ez_sim = osiris.longE()
+Bphi_sim = osiris.phiB()
 
 
 def EField(r,z,axis,SHMmodel):
@@ -50,10 +51,25 @@ def EField(r,z,axis,SHMmodel):
       zDex = find_nearest_index(z_sim, z)
       rDex = find_nearest_index(r_sim, r)
       return -Ez_sim[rDex, zDex]
-def Momentum(r, z, dt, p_0, axis, model):
-  #Returns the momentum at t + dt, in units of m_e 
-  return p_0 +  EField(r, z, axis, model) * dt
 
+def BForce(r,z,p1,p2,axis,model):
+  if model or z - t0 > 6:
+    return 0.0
+
+  zDex = find_nearest_index(z_sim, z)
+  rDex = find_nearest_index(r_sim, r)
+  BField =  Bphi_sim[rDex, zDex]
+  if axis == 1:
+    return -1.0 * p2 * BField
+  else:
+    return -1.0 * p1 * BField
+def Momentum(r, z, dt, p1, p2, axis, model):
+  #Returns the momentum at t + dt, in units of m_e 
+  dp = (EField(r, z, axis, model) + BForce(r,z,p1,p2,axis,model))* dt
+  if axis == 1:
+    return p1 + dp
+  else:
+    return p2 + dp
 def Velocity(p):
   #returns the velocity from the momentum, in units of c
   return p
@@ -84,10 +100,10 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
-    prn = Momentum(rn, zn, dt, prn,2, SHM)
+    prn = Momentum(rn, zn, dt, pzn, prn,2, SHM)
     vrn = Velocity(prn)
     
-    pzn = Momentum(rn, zn, dt, pzn, 1, SHM)
+    pzn = Momentum(rn, zn, dt, pzn, prn, 1, SHM)
     vzn = Velocity(pzn)
 
     #Add former data points to the data lists
