@@ -3,13 +3,18 @@
 #   This script is designed to track the path of electrons injected in
 #   electron-driven plasma wakefield accelerators.
 
+# Python imports
 import sys
 import math
 import numpy as np
-import include.plotTracks as plotTracks 
 import h5py as h5
+import importlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
+
+# include file imports
+import include.plotTracks as plotTracks 
+import include.getOsirisFields as osiris
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
@@ -19,20 +24,9 @@ C = 299892458                     #speed of light in vacuum in m/s
 N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
-def getEfromSim():
-  f = h5.File("data/fields/e2-000066.h5","r")
-  datasetNames = [n for n in f.keys()] #Two Datasets: AXIS and e2
-  E_dat = f['e2'][:]
-  E_dat = E_dat.astype(float)
-  a1_bounds = f['AXIS']['AXIS1']#.astype(float)
-  a2_bounds = f['AXIS']['AXIS2']#.astype(float)
-  
-  z_dat = np.linspace(a1_bounds[0],a1_bounds[1],len(E_dat[0]))
-  r_dat = np.linspace(a2_bounds[0],a2_bounds[1],len(E_dat))
-  t0 = 858.95 
-  return r_dat, z_dat, E_dat, t0
+# Retrieve simulated fields from OSIRIS simulations
+r_sim, z_sim, E_sim, t0 = osiris.transE()
 
-r_sim, z_sim, E_sim, t0 = getEfromSim()
 def EField(r,z,SHMmodel):
   #SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
   #SHMmodel = false returns the simulated data from OSIRIS
@@ -116,19 +110,27 @@ def find_nearest_index(array,value):
         return idx
 def main():
   #Print out program description and instructions:
-
+  if len(sys.argv) == 2:
+    input_fname = str(sys.argv[1])
+    print("Using initial conditions from ",input_fname)
+    init = importlib.import_module(input_fname)
+    r_0 = init.r_0
+    p_0 = init.p_0
+    xi_0 = init.xi_0
+    Model = init.SHModel
+    z_0 = xi_0 + t0
+  elif len(sys.argv) == 1:
   #Get initial position and momentum from user input:
-  r_0 = float(input("Initial radius (c/w_p): "))
-  p_0 = float(input("Initial transverse momentum (m_e c): "))        
-  z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
-  Model = bool(input("Use SHM Model (True/False): "))
+    r_0 = float(input("Initial radius (c/w_p): "))
+    p_0 = float(input("Initial transverse momentum (m_e c): "))        
+    z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
+    Model = bool(input("Use SHM Model (True/False): "))
+  else:
+    print("Improper number of arguments. Expected 'python3 eTracks.py' or 'python3 eTracks.py <fname>'")
+    return
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
   r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,p_0,z_0,Model)
-  #Get number of data points
-  #n = len(r_dat)
-  #Create list of E values for each transverse position
-  #Plot the trajectory
   plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, E_sim, r_sim,z_sim,Model)
 main()
