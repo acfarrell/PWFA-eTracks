@@ -53,7 +53,7 @@ def EField(r,z,axis,SHMmodel):
       return -Ez_sim[rDex, zDex]
 
 def BForce(r,z,p1,p2,axis,model):
-  if model or z - t0 > 6:
+  if model:# or z - t0 > 5:
     return 0.0
 
   zDex = find_nearest_index(z_sim, z)
@@ -62,7 +62,7 @@ def BForce(r,z,p1,p2,axis,model):
   if axis == 1:
     return -1.0 * p2 * BField
   else:
-    return -1.0 * p1 * BField
+    return 1.0 * (p1 + 1) * BField
 def Momentum(r, z, dt, p1, p2, axis, model):
   #Returns the momentum at t + dt, in units of m_e 
   dp = (EField(r, z, axis, model) + BForce(r,z,p1,p2,axis,model))* dt
@@ -97,6 +97,7 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
   
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
+  i = 0 #iteration counter
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
@@ -121,10 +122,14 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
     rn += vrn * dt
     t += dt
     xin = zn - t0
+    i += 1
     #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
 
-    if xin < 0:
-      print("Tracking quit due to xi < 0")
+    if xin < 0 or rn > 6:
+      print("Tracking quit due to xi or r out of range")
+      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+    if i > 10000:
+      print("Tracking quit due to more than 10K iterations")
       return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
   print("\n Turn Radius = ",turnRad)
   return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
