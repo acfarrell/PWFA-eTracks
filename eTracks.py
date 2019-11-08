@@ -25,21 +25,34 @@ N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
 # Retrieve simulated fields from OSIRIS simulations
-r_sim, z_sim, E_sim, t0 = osiris.transE()
+r_sim, z_sim, t0 = osiris.axes()
+Er_sim = osiris.transE()
+Ez_sim = osiris.longE()
 
-def EField(r,z,SHMmodel):
-  #SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
-  #SHMmodel = false returns the simulated data from OSIRIS
-  if SHMmodel:
-    E = -1.0/4.0 * r
-    return E
-  else:
-    zDex = find_nearest_index(z_sim, z)
-    rDex = find_nearest_index(r_sim, r)
-    return -E_sim[rDex,zDex]
-def Momentum(r, z, dt, p_0,model):
+
+def EField(r,z,axis,SHMmodel):
+  # SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
+  # SHMmodel = false returns the simulated data from OSIRIS
+  # axis = 1 refers to xi-axis (longitudinal) field
+  # axis = 2 refers to r-axis (transverse) field
+  if axis == 2:
+    if SHMmodel:
+      E = -1.0/4.0 * r
+      return E
+    else:
+      zDex = find_nearest_index(z_sim, z)
+      rDex = find_nearest_index(r_sim, r)
+      return -Er_sim[rDex,zDex]
+  elif axis == 1:
+    if SHMmodel:
+      return 0.0
+    else:
+      zDex = find_nearest_index(z_sim, z)
+      rDex = find_nearest_index(r_sim, r)
+      return -Ez_sim[rDex, zDex]
+def Momentum(r, z, dt, p_0, axis, model):
   #Returns the momentum at t + dt, in units of m_e 
-  return p_0 +  EField(r,z,model) * dt
+  return p_0 +  EField(r, z, axis, model) * dt
 
 def Velocity(p):
   #returns the velocity from the momentum, in units of c
@@ -48,47 +61,55 @@ def Velocity(p):
 def GetTrajectory(r_0,p_0,z_0,SHM):
   #returns array of r v. t
 
-  r_dat = []
-  z_dat = []
-  t_dat = []
-  xi_dat = []
-  E_dat = []
+  r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
 
   rn = r_0 # position in c/w_p
-  pn = p_0 # momentum in m_e c
-  vn = Velocity(pn) # velocity in c
+  prn = p_0 # momentum in m_e c
+  vrn = Velocity(prn) # velocity in c
   t = t0 # start time in 1/w_p
   dt = .001 # time step in 1/w_p
+  
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
+  pzn = -1.0 
+  vzn = Velocity(pzn)
   print("\n Initial z = ",zn)
   
   old_r = r_0 - 1.0
   turnRad = r_0
   xin = zn - t0
-
+  
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
-    pn = Momentum(rn, zn, dt, pn,SHM)
-    vn = Velocity(pn)
-          
+    prn = Momentum(rn, zn, dt, prn,2, SHM)
+    vrn = Velocity(prn)
+    
+    pzn = Momentum(rn, zn, dt, pzn, 1, SHM)
+    vzn = Velocity(pzn)
+
     #Add former data points to the data lists
     r_dat.append(rn)
     t_dat.append(t)
     z_dat.append(zn)
-    xi_dat.append(z0 - t)
-    E_dat.append( EField(rn, zn, SHM) )
+    xi_dat.append(xin)
+    E_dat.append( EField(rn, zn, 2, SHM) )
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
 
     #Add the distance traveled in dt to r, increase t by dt
-    zn -= dt
-    rn += vn*dt
+    zn += vzn * dt
+    rn += vrn * dt
     t += dt
+    xin = zn - t0
+    #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
+
+    if xin < 0:
+      print("Tracking quit due to xi < 0")
+      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
   print("\n Turn Radius = ",turnRad)
   return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
 
@@ -108,8 +129,9 @@ def find_nearest_index(array,value):
         return idx-1
     else:
         return idx
+
+
 def main():
-  #Print out program description and instructions:
   if len(sys.argv) == 2:
     input_fname = str(sys.argv[1])
     print("Using initial conditions from ",input_fname)
@@ -118,6 +140,7 @@ def main():
     p_0 = init.p_0
     xi_0 = init.xi_0
     Model = init.SHModel
+    track = init.track
     z_0 = xi_0 + t0
   elif len(sys.argv) == 1:
   #Get initial position and momentum from user input:
@@ -125,12 +148,15 @@ def main():
     p_0 = float(input("Initial transverse momentum (m_e c): "))        
     z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
     Model = bool(input("Use SHM Model (True/False): "))
+    track = 'med'
   else:
     print("Improper number of arguments. Expected 'python3 eTracks.py' or 'python3 eTracks.py <fname>'")
     return
+
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
   r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,p_0,z_0,Model)
-  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, E_sim, r_sim,z_sim,Model)
+  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
+
 main()

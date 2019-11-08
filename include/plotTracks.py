@@ -8,7 +8,7 @@ import seaborn as sea
 import matplotlib.cm as cm
 import include.plotSimTracks as plotSimTracks
 
-def plot(r,z,t,xi,E,r_sim,z_sim,SHM):
+def plot(r, z, t, xi, E, r_sim, z_sim, SHM, track):
   plt.style.use('seaborn-poster')
 
   fig, ax = plt.subplots()
@@ -24,21 +24,21 @@ def plot(r,z,t,xi,E,r_sim,z_sim,SHM):
     colors = ax.pcolormesh(z_sim - 858.95 ,r_sim,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
     
     cbar = fig.colorbar(colors,ax=ax)
-    cbar.set_label('Electric Field ($m_e c\omega_p / e$)')
+    cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
     ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
     ax.set_ylabel('r ($c/\omega_p$)')
-    ax.set_title('Transverse Electric Field from Simulation')
+    ax.set_title('Electron trajectory from simulation v. OSIRIS for ' + track + ' track')
     
-    ax.plot(xi,r,'k')
+    ax.plot(xi,r,'k',label = "Simulated")
 
   plt.xlim(z_sim[0]- 858.95, z_sim[-1]-858.95)
-  xi_OSIRIS, r_OSIRIS = plotSimTracks.get_xir()
-  ax.plot(xi_OSIRIS, r_OSIRIS, 'k--')
-  ax.set_title("Electron Radial Trajectory")
+  xi_OSIRIS, r_OSIRIS = plotSimTracks.get_xir(track)
+  ax.plot(xi_OSIRIS, r_OSIRIS, 'k--', label="OSIRIS")
+  ax.legend()
   if SHM:
     model = "SHM"
   else:
     model = "simE"
-  fn = model + "_"+str(r[0])[2:] +".png"
+  fn = "plots/"+model + "_"+track +".png"
   plt.savefig(fn,transparent=True)
   plt.show()
