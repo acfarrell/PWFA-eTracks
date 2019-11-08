@@ -6,7 +6,7 @@
 import sys
 import math
 import numpy as np
-import plotTracks 
+import include.plotTracks as plotTracks 
 import h5py as h5
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
@@ -20,7 +20,7 @@ N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
 def getEfromSim():
-  f = h5.File("simulated_data/fields/e2-000066.h5","r")
+  f = h5.File("data/fields/e2-000066.h5","r")
   datasetNames = [n for n in f.keys()] #Two Datasets: AXIS and e2
   E_dat = f['e2'][:]
   E_dat = E_dat.astype(float)

@@ -30,7 +30,7 @@ def get_data(fname):
       E_z.append(float(row[5]))
       E_r.append(float(row[6]))
       B.append(float(row[7]))
-get_data('simulated_data/TRACKS_data_Med_X2.txt')
+get_data('data/TRACKS_data_Med_X2.txt')
 
 def get_xir():
   #fig, ax = plt.subplots()

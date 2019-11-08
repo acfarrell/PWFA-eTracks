@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sea
 import matplotlib.cm as cm
-import plotSimTracks
+import include.plotSimTracks as plotSimTracks
 
 def plot(r,z,t,xi,E,r_sim,z_sim,SHM):
   plt.style.use('seaborn-poster')
