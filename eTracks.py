@@ -64,17 +64,6 @@ def BForce(r,z,v1,v2,axis,model):
   else:
     return 1.0 * (v1 + 1) * BField
 
-#def Velocity(r, z, dt, v1, v2, axis, model):
-        #  #Returns the momentum at t + dt, in units of m_e 
-#  F = (EField(r, z, axis, model) + BForce(r,z,v1,v2,axis,model))
-#  dv = F * dt 
-#  if axis == 1:
-          #    v = v1 
-#  else:
-          #    v = v2
-
-#  return v + dv
-
 def Velocity(r, z, dt, v1, v2, axis, model):
   #returns the velocity from the momentum, in units of c
   F = (EField(r, z, axis, model) + BForce(r,z,v1,v2,axis,model))
