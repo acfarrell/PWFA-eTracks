@@ -52,7 +52,7 @@ def EField(r,z,axis,SHMmodel):
       rDex = find_nearest_index(r_sim, r)
       return -Ez_sim[rDex, zDex]
 
-def BForce(r,z,p1,p2,axis,model):
+def BForce(r,z,v1,v2,axis,model):
   if model:# or z - t0 > 5:
     return 0.0
 
@@ -60,19 +60,38 @@ def BForce(r,z,p1,p2,axis,model):
   rDex = find_nearest_index(r_sim, r)
   BField =  Bphi_sim[rDex, zDex]
   if axis == 1:
-    return -1.0 * p2 * BField
+    return -1.0 * v2 * BField
   else:
-    return 1.0 * (p1 + 1) * BField
-def Momentum(r, z, dt, p1, p2, axis, model):
-  #Returns the momentum at t + dt, in units of m_e 
-  dp = (EField(r, z, axis, model) + BForce(r,z,p1,p2,axis,model))* dt
-  if axis == 1:
-    return p1 + dp
-  else:
-    return p2 + dp
-def Velocity(p):
+    return 1.0 * (v1 + 1) * BField
+
+#def Velocity(r, z, dt, v1, v2, axis, model):
+        #  #Returns the momentum at t + dt, in units of m_e 
+#  F = (EField(r, z, axis, model) + BForce(r,z,v1,v2,axis,model))
+#  dv = F * dt 
+#  if axis == 1:
+          #    v = v1 
+#  else:
+          #    v = v2
+
+#  return v + dv
+
+def Velocity(r, z, dt, v1, v2, axis, model):
   #returns the velocity from the momentum, in units of c
-  return p
+  F = (EField(r, z, axis, model) + BForce(r,z,v1,v2,axis,model))
+  if axis == 1:
+    v = v1 + 1
+  else:
+    v = v2
+  if abs(v) > 1:
+    print("Error: v exceeds light speed")
+    return 0
+  dv = (F * dt / Gamma(v)) * (1- v**2 * Gamma(v)**3 )
+  if axis == 1:
+    return v - 1 + dv
+  return v + dv
+
+def Gamma(v):
+  return  1 / math.sqrt(1 - v**2)
 
 def GetTrajectory(r_0,p_0,z_0,SHM):
   #returns array of r v. t
@@ -80,15 +99,14 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
   r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
 
   rn = r_0 # position in c/w_p
-  prn = p_0 # momentum in m_e c
-  vrn = Velocity(prn) # velocity in c
+  pr0 = p_0 # momentum in m_e c
+  vrn = pr0/Gamma(pr0) # velocity in c
   t = t0 # start time in 1/w_p
   dt = .001 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
-  pzn = -1.0 
-  vzn = Velocity(pzn)
+  vzn = -1.0 
   print("\n Initial z = ",zn)
   
   old_r = r_0 - 1.0
@@ -101,11 +119,9 @@ def GetTrajectory(r_0,p_0,z_0,SHM):
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
-    prn = Momentum(rn, zn, dt, pzn, prn,2, SHM)
-    vrn = Velocity(prn)
-    
-    pzn = Momentum(rn, zn, dt, pzn, prn, 1, SHM)
-    vzn = Velocity(pzn)
+    vrn = Velocity(rn, zn, dt, vzn, vrn,2, SHM)
+        
+    vzn = Velocity(rn, zn, dt, vzn, vrn, 1, SHM)
 
     #Add former data points to the data lists
     r_dat.append(rn)
