@@ -74,7 +74,7 @@ def Velocity(r, z, dt, v1, v2, axis, model):
   if abs(v) > 1:
     print("Error: v exceeds light speed")
     return 0
-  dv = (F * dt / Gamma(v)) * (1- v**2 * Gamma(v)**3 )
+  dv = (F * dt ) / (Gamma(v) + v**2 * Gamma(v)**3 )
   if axis == 1:
     return v - 1 + dv
   return v + dv
@@ -82,20 +82,21 @@ def Velocity(r, z, dt, v1, v2, axis, model):
 def Gamma(v):
   return  1 / math.sqrt(1 - v**2)
 
-def GetTrajectory(r_0,p_0,z_0,SHM):
+def GetTrajectory(r_0,pr_0,z_0,pz_0,SHM):
   #returns array of r v. t
 
   r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
 
   rn = r_0 # position in c/w_p
-  pr0 = p_0 # momentum in m_e c
+  pr0 = pr_0 # momentum in m_e c
   vrn = pr0/Gamma(pr0) # velocity in c
   t = t0 # start time in 1/w_p
   dt = .001 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
-  vzn = -1.0 
+  pz0 = pz_0
+  vzn = pz0/Gamma(pz0) - 1.0 
   print("\n Initial z = ",zn)
   
   old_r = r_0 - 1.0
@@ -163,7 +164,8 @@ def main():
     print("Using initial conditions from ",input_fname)
     init = importlib.import_module(input_fname)
     r_0 = init.r_0
-    p_0 = init.p_0
+    pr_0 = init.pr_0
+    pz_0 = init.pz_0
     xi_0 = init.xi_0
     Model = init.SHModel
     track = init.track
@@ -182,7 +184,7 @@ def main():
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,p_0,z_0,Model)
+  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,z_0,pz_0,Model)
   plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
 
 main()
