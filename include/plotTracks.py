@@ -33,7 +33,7 @@ def plot(r, z, t, xi, E, r_sim, z_sim, SHM, track):
 
   plt.xlim(z_sim[0]- 858.95, z_sim[-1]-858.95)
   xi_OSIRIS, r_OSIRIS = plotSimTracks.get_xir(track)
-  ax.plot(xi_OSIRIS, r_OSIRIS, 'k--', label="OSIRIS")
+  ax.plot(xi_OSIRIS, r_OSIRIS, 'r:', label="OSIRIS")
   ax.legend()
   if SHM:
     model = "SHM"
