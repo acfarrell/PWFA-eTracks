@@ -7,4 +7,3 @@ pz_0 = 0.0
 xi_0 = 7.24292    # initial xi-position in c/w_p
 SHModel = False   # True to use SHM model, False to use OSIRIS fields
 track = 'max'     # name of track if applicable
-v0 = pr_0
