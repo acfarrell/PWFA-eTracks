@@ -75,4 +75,3 @@ def plot_E_v_r():
 
 #  ani = animation.FuncAnimation(fig,animateEvr,frames=int(len(r)/10.0),interval=1,repeat=True)
 #  plt.show()
-
