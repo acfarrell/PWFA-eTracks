@@ -7,3 +7,4 @@ pz_0 = 0.0
 xi_0 = 6.94922     # initial xi-position in c/w_p
 SHModel = False    # True to use SHM model, False to use OSIRIS fields
 track = 'min'
+v0 = pr_0

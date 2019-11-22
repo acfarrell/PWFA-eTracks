@@ -82,21 +82,21 @@ def Velocity(r, z, dt, v1, v2, axis, model):
 def Gamma(v):
   return  1 / math.sqrt(1 - v**2)
 
-def GetTrajectory(r_0,pr_0,z_0,pz_0,SHM):
+def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #returns array of r v. t
 
   r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
 
   rn = r_0 # position in c/w_p
   pr0 = pr_0 # momentum in m_e c
-  vrn = pr0/Gamma(pr0) # velocity in c
+  vrn = vr_0 # velocity in c
   t = t0 # start time in 1/w_p
   dt = .001 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
   pz0 = pz_0
-  vzn = pz0/Gamma(pz0) - 1.0 
+  vzn = vz_0 - 1.0 
   print("\n Initial z = ",zn)
   
   old_r = r_0 - 1.0
@@ -170,6 +170,15 @@ def main():
     Model = init.SHModel
     track = init.track
     z_0 = xi_0 + t0
+    if hasattr(init,'vr0'):
+      vr0 = init.vr0
+    else:
+      vr0 = pr_0/gamma(pr_0)
+    if hasattr(init,'vz0'):
+      print("Passed condition for vz0 existing in init")
+      vz0 = init.vz0
+    else:
+      vz0 = pz_0/Gamma(pz_0)
   elif len(sys.argv) == 1:
   #Get initial position and momentum from user input:
     r_0 = float(input("Initial radius (c/w_p): "))
@@ -184,7 +193,7 @@ def main():
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,z_0,pz_0,Model)
+  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr0,z_0,pz_0,vz0,Model)
   plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
 
 main()
