@@ -46,10 +46,11 @@ def main():
   nrows = len(Er)
   ncols = len(Er[0])
   escaped = np.zeros((nrows,ncols))
-  for i in range(len(Er) -  1):
-    j = int(len(Er[0])/2)
+  for i in range(50):
+    print('Row ',i)
+    j = int(ncols/2)
     while j < ncols:
-      if Er[i,j] < 0:
+      if Er[i,j] < -0.1:
         escaped[i,j] = eTracks.GetTrajectory(r[i],0,0,z[j],0,0,False)
       j += 1
   plot(r,z,t0,escaped)

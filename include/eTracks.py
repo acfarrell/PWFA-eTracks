@@ -146,9 +146,9 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     i += 1
 #    print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
 
-    if outOfBounds(rn,zn):
+    if outOfBounds(rn,zn) or rn > 6 or xin < 0:
       return -1        
-  print("\n Turn Radius = ",turnRad)
+#  print("\n Turn Radius = ",turnRad)
   #return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
   return 1        
 
