@@ -13,8 +13,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as col
 
 # include file imports
-import include.plotTracks as plotTracks 
-import include.getOsirisFields as osiris
+from .getOsirisFields import axes, longE, transE, phiB 
+from .getBounds import getBounds
+from .plotTracks import plot
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
@@ -25,11 +26,17 @@ N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
 # Retrieve simulated fields from OSIRIS simulations
-r_sim, z_sim, t0 = osiris.axes()
-Er_sim = osiris.transE()
-Ez_sim = osiris.longE()
-Bphi_sim = osiris.phiB()
-
+try: r_sim
+except NameError: r_sim = None
+if r_sim is None:
+  r_sim, z_sim, t0 = axes()
+  Er_sim = transE()
+  Ez_sim = longE()
+  Bphi_sim = phiB()
+try: bounds
+except NameError: bounds = None
+if bounds is None:
+  bounds = getBounds()
 
 def EField(r,z,axis,SHMmodel):
   # SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
@@ -82,6 +89,15 @@ def Velocity(r, z, dt, v1, v2, axis, model):
 def Gamma(v):
   return  1 / math.sqrt(1 - v**2)
 
+def outOfBounds(r,z):
+  zDex = find_nearest_index(z_sim, z)
+  rDex = find_nearest_index(r_sim, r)
+  
+  if bounds[rDex, zDex] == 1:
+    print(' electron is out of bounds')
+    return True
+  return False
+
 def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #returns array of r v. t
 
@@ -97,7 +113,6 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   zn = z0
   pz0 = pz_0
   vzn = vz_0 - 1.0 
-  print("\n Initial z = ",zn)
   
   old_r = r_0 - 1.0
   turnRad = r_0
@@ -129,16 +144,13 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     t += dt
     xin = zn - t0
     i += 1
-    #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
+#    print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
 
-    if xin < 0 or rn > 6:
-      print("Tracking quit due to xi or r out of range")
-      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
-    if i > 10000:
-      print("Tracking quit due to more than 10K iterations")
-      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+    if outOfBounds(rn,zn):
+      return -1        
   print("\n Turn Radius = ",turnRad)
-  return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+  #return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+  return 1        
 
 def GetInitialZ(z_0,r_0):
   if z_0 == -1:
@@ -157,43 +169,3 @@ def find_nearest_index(array,value):
     else:
         return idx
 
-
-def main():
-  if len(sys.argv) == 2:
-    input_fname = str(sys.argv[1])
-    print("Using initial conditions from ",input_fname)
-    init = importlib.import_module(input_fname)
-    r_0 = init.r_0
-    pr_0 = init.pr_0
-    pz_0 = init.pz_0
-    xi_0 = init.xi_0
-    Model = init.SHModel
-    track = init.track
-    z_0 = xi_0 + t0
-    if hasattr(init,'vr0'):
-      vr0 = init.vr0
-    else:
-      vr0 = pr_0/gamma(pr_0)
-    if hasattr(init,'vz0'):
-      print("Passed condition for vz0 existing in init")
-      vz0 = init.vz0
-    else:
-      vz0 = pz_0/Gamma(pz_0)
-  elif len(sys.argv) == 1:
-  #Get initial position and momentum from user input:
-    r_0 = float(input("Initial radius (c/w_p): "))
-    p_0 = float(input("Initial transverse momentum (m_e c): "))        
-    z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
-    Model = bool(input("Use SHM Model (True/False): "))
-    track = 'med'
-  else:
-    print("Improper number of arguments. Expected 'python3 eTracks.py' or 'python3 eTracks.py <fname>'")
-    return
-
-  if Model:
-    print("Using SHM Model")
-  #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr0,z_0,pz_0,vz0,Model)
-  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
-
-main()
