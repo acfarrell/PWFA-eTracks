@@ -1,7 +1,11 @@
+import sys
+import csv
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from tempfile import TemporaryFile as tmp
 
 import include.eTracks as eTracks 
 import include.getOsirisFields as osiris
@@ -9,31 +13,46 @@ import include.getOsirisFields as osiris
 Er = osiris.transE()
 r,z,t0 = osiris.axes()
 
-def plot(r,z,t0,escaped):
+def plot():
+
+  dat = np.load('data.npz')
+  xi = dat['xi']
+  escaped = dat['esc']
+  trail = dat['beam']
+  drive = []
+  n = 0
+  for i in range(len(r)):
+    for j in range(len(xi)):
+      if escaped[i,j] == 1:
+        drive.append(xi[j])
+        n += 1
+  print("Captured Driving Electrons = ", n)
   plt.style.use('seaborn-poster')
-  fig, ax  = plt.subplots()
+  fig, axs  = plt.subplots(2,sharex=True)
   E = osiris.transE()
 
   #define binary color map
   ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(0.0,1.0,0.0,1.0)]
   ternary_cmap = mpl.colors.LinearSegmentedColormap.from_list('Custom cmap', ternary_cmaplist, 3)
   
-  colors = ax.pcolormesh(z - t0 ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+  colors = axs[0].pcolormesh(z - t0 ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
   
-  colors2 = ax.pcolormesh(z - t0 ,r,escaped,cmap=ternary_cmap)
+  colors2 = axs[0].pcolormesh(z - t0 ,r,escaped,cmap=ternary_cmap)
   
-  cbar = fig.colorbar(colors,ax=ax)
+  cbar = fig.colorbar(colors,ax=axs.ravel().tolist())
   cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
-  
-  cbar2 = fig.colorbar(colors2,ax=ax)
-  cbar2.set_ticks([])
-  cbar2.set_label('Bound, Untested, Escaped')
 
-  ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
-  ax.set_ylabel('r ($c/\omega_p$)')
-  ax.set_title('Captured and Escaped Electron Test')
-    
+  axs[0].set_xlabel("$\\xi$ ($c/\omega_p$)")
+  axs[0].set_ylabel('r ($c/\omega_p$)')
+  axs[0].set_title('Captured and Escaped Electron Test')
   
+  nbins = int(len(E[0])/20)
+  axs[1].hist(drive, bins = nbins,color='red',label="Driving Beam")
+  axs[1].hist(trail, bins = nbins,color='blue',label="Trailing Beam")
+  counts, bin_edges = np.histogram(trail,bins=nbins)
+  axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
+  axs[1].legend()
+  axs[1].set_ylim(None, counts.max()+20 )
   plt.xlim(z[0]- t0, z[-1]-t0)
   fn = "escaped.png"
   plt.savefig(fn,transparent=True)
@@ -41,17 +60,28 @@ def plot(r,z,t0,escaped):
 
   return
 
+  
 
 def main():
   nrows = len(Er)
   ncols = len(Er[0])
   escaped = np.zeros((nrows,ncols))
-  for i in range(50):
-    print('Row ',i)
+
+  driveBeamProf = []
+  trailBeamProf = []
+  
+  fname = 'data.npz'
+
+  for i in range(nrows):
+    print('Row ',i, "/",nrows, end="\r", flush=True)
     j = int(ncols/2)
     while j < ncols:
       if Er[i,j] < -0.1:
-        escaped[i,j] = eTracks.GetTrajectory(r[i],0,0,z[j],0,0,False)
+        escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],0,0,z[j],0,0,False)
+      if escaped[i,j] == 1:
+        trailBeamProf.append(xiPos)
       j += 1
-  plot(r,z,t0,escaped)
+  np.savez(fname, r=r,xi=z - t0, esc=escaped, beam=trailBeamProf)
+  plot()
 main()
+#plot()

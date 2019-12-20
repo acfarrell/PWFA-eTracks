@@ -94,7 +94,7 @@ def outOfBounds(r,z):
   rDex = find_nearest_index(r_sim, r)
   
   if bounds[rDex, zDex] == 1:
-    print(' electron is out of bounds')
+    #    print(' electron is out of bounds')
     return True
   return False
 
@@ -147,10 +147,10 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
 #    print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
 
     if outOfBounds(rn,zn) or rn > 6 or xin < 0:
-      return -1        
+      return -1 , -1       
 #  print("\n Turn Radius = ",turnRad)
   #return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
-  return 1        
+  return 1, xin        
 
 def GetInitialZ(z_0,r_0):
   if z_0 == -1:
