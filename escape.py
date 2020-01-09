@@ -42,9 +42,8 @@ def plot():
   cbar = fig.colorbar(colors,ax=axs.ravel().tolist())
   cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
 
-  axs[0].set_xlabel("$\\xi$ ($c/\omega_p$)")
   axs[0].set_ylabel('r ($c/\omega_p$)')
-  axs[0].set_title('Captured and Escaped Electron Test')
+  axs[0].set_title('Captured Electron Beam Test')
   
   nbins = int(len(E[0])/20)
   axs[1].hist(drive, bins = nbins,color='red',label="Driving Beam")
@@ -71,15 +70,22 @@ def main():
   trailBeamProf = []
   
   fname = 'data.npz'
-
+  eCount = 0
+  num = 0
   for i in range(nrows):
-    print('Row ',i, "/",nrows, end="\r", flush=True)
     j = int(ncols/2)
     while j < ncols:
       if Er[i,j] < -0.1:
-        escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],0,0,z[j],0,0,False)
+        eCount += 1
+        plotTrack = False
+        if eCount % 1000 == 0:
+          plotTrack = True
+          num +=1
+        
+        escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],0,0,z[j],0,0,plotTrack, num)
       if escaped[i,j] == 1:
         trailBeamProf.append(xiPos)
+      print('Row ',i, "/",nrows," : ",eCount," electrons", end="\r", flush=True)
       j += 1
   np.savez(fname, r=r,xi=z - t0, esc=escaped, beam=trailBeamProf)
   plot()

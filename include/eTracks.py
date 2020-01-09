@@ -98,9 +98,9 @@ def outOfBounds(r,z):
     return True
   return False
 
-def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
+def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,plot,num):
   #returns array of r v. t
-
+  SHM = False
   r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
 
   rn = r_0 # position in c/w_p
@@ -144,13 +144,14 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     t += dt
     xin = zn - t0
     i += 1
-#    print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
-
     if outOfBounds(rn,zn) or rn > 6 or xin < 0:
-      return -1 , -1       
-#  print("\n Turn Radius = ",turnRad)
-  #return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
-  return 1, xin        
+      esc, xiPos = -1 , xin
+      break
+    else:
+      esc, xiPos = 1, xin
+  if plot:
+    plotTest(np.array(r_dat), np.array(xi_dat), esc, num)        
+  return esc, xiPos        
 
 def GetInitialZ(z_0,r_0):
   if z_0 == -1:
@@ -168,4 +169,27 @@ def find_nearest_index(array,value):
         return idx-1
     else:
         return idx
+def plotTest(r,xi, esc, num):
 
+  plt.style.use('seaborn-poster')
+
+  fig, ax = plt.subplots()
+  #Make color axis of electric field
+  colors = ax.pcolormesh(z_sim - 858.95 ,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
+    
+  cbar = fig.colorbar(colors,ax=ax)
+  cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
+  ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
+  ax.set_ylabel('r ($c/\omega_p$)')
+    
+  ax.plot(xi,r,'k',label = "Simulated Trajectory")
+
+  plt.xlim(z_sim[0]- 858.95, z_sim[-1]-858.95)
+  ax.legend()
+  if esc == 1:
+    status = "Captured"
+  else:
+    status = "Escaped"
+  ax.set_title('Electron Trajectory Marked '+status)
+  fn = "plots/"+ str(num) + "_" + status + ".png"
+  plt.savefig(fn,transparent=True)
