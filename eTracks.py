@@ -64,20 +64,22 @@ def BForce(r,z,v1,v2,axis,model):
   else:
     return 1.0 * (v1 + 1) * BField
 
-def Velocity(r, z, dt, v1, v2, axis, model):
-  #returns the velocity from the momentum, in units of c
-  F = (EField(r, z, axis, model) + BForce(r,z,v1,v2,axis,model))
-  if axis == 1:
-    v = v1 + 1
-  else:
-    v = v2
+def Velocity(r, z, dt, vi, vj, dvi, dvj, start, model):
+  #returns the velocity from the momentum, in units of c in axis direction
+  Fi = (EField(r, z, 1, model) + BForce(r,z,vi,vj,1,model))
+  Fj = (EField(r, z, 2, model) + BForce(r,z,vi,vj,2,model))
+  #Correct for frame moving in +z at speed of light
+  vi = vi + 1
+  v = math.sqrt(vi**2 + vj**2)
+  print("velocity = ", v)
   if abs(v) > 1:
     print("Error: v exceeds light speed")
-    return 0
-  dv = (F * dt ) / (Gamma(v) + v**2 * Gamma(v)**3 )
-  if axis == 1:
-    return v - 1 + dv
-  return v + dv
+#    return 0.0,0.0
+
+  dvi = dt/Gamma(v) * (Fj*Gamma(v)**2 * vi * vj - Fi*(1+Gamma(v)**2*vj**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  dvj = dt/Gamma(v) * (Fi*Gamma(v)**2 * vi * vj - Fj*(1+Gamma(v)**2*vi**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  print("dvi = ",dvi,", dvj = ",dvj)
+  return dvi, dvj
 
 def Gamma(v):
   return  1 / math.sqrt(1 - v**2)
@@ -91,7 +93,7 @@ def GetTrajectory(r_0,pr_0,z_0,pz_0,SHM):
   pr0 = pr_0 # momentum in m_e c
   vrn = pr0/Gamma(pr0) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .001 # time step in 1/w_p
+  dt = .0005 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
@@ -99,19 +101,22 @@ def GetTrajectory(r_0,pr_0,z_0,pz_0,SHM):
   vzn = pz0/Gamma(pz0) - 1.0 
   print("\n Initial z = ",zn)
   
+  dvz = 0.0
+  dvr = 0.0
+
   old_r = r_0 - 1.0
   turnRad = r_0
   xin = zn - t0
-  
+    
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
-    vrn = Velocity(rn, zn, dt, vzn, vrn,2, SHM)
-        
-    vzn = Velocity(rn, zn, dt, vzn, vrn, 1, SHM)
+    dvz, dvr = Velocity(rn, zn, dt, vzn, vrn, dvz, dvr, i % 2, SHM)
+    vzn = vzn + dvz
+    vrn = vrn + dvr
 
     #Add former data points to the data lists
     r_dat.append(rn)
@@ -134,7 +139,7 @@ def GetTrajectory(r_0,pr_0,z_0,pz_0,SHM):
     if xin < 0 or rn > 6:
       print("Tracking quit due to xi or r out of range")
       return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
-    if i > 10000:
+    if i > 10000000:
       print("Tracking quit due to more than 10K iterations")
       return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
   print("\n Turn Radius = ",turnRad)
