@@ -7,3 +7,5 @@ pz_0 = 0.0
 xi_0 = 7.24292    # initial xi-position in c/w_p
 SHModel = False   # True to use SHM model, False to use OSIRIS fields
 track = 'max'     # name of track if applicable
+vr_0 = -1         # input arbitrary num when momenta are < 1 (takes care of gamma factor)
+vz_0 = -1

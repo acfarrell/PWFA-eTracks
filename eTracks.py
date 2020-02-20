@@ -75,30 +75,39 @@ def Velocity(r, z, dt, vi, vj, dvi, dvj, start, model):
   if abs(v) > 1:
     print("Error: v exceeds light speed")
 #    return 0.0,0.0
-
-  dvi = dt/Gamma(v) * (Fj*Gamma(v)**2 * vi * vj - Fi*(1+Gamma(v)**2*vj**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
-  dvj = dt/Gamma(v) * (Fi*Gamma(v)**2 * vi * vj - Fj*(1+Gamma(v)**2*vi**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  vdv = (vi*dvi + vj*dvj)
+  dvi = (Fi*dt / Gamma(v) - Gamma(v)**2 * vi *vj* dvj)/(1+Gamma(v)**2 * vi**2)
+  dvj = (Fj*dt / Gamma(v) - Gamma(v)**2 * vj *vi* dvi)/(1+Gamma(v)**2 * vj**2)
+  #dvi = dt/Gamma(v) * (Fj*Gamma(v)**2 * vi * vj - Fi*(1+Gamma(v)**2*vj**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  #dvj = dt/Gamma(v) * (Fi*Gamma(v)**2 * vi * vj - Fj*(1+Gamma(v)**2*vi**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  
   print("dvi = ",dvi,", dvj = ",dvj)
   return dvi, dvj
 
 def Gamma(v):
   return  1 / math.sqrt(1 - v**2)
 
-def GetTrajectory(r_0,pr_0,z_0,pz_0,SHM):
+def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #returns array of r v. t
 
   r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
 
   rn = r_0 # position in c/w_p
   pr0 = pr_0 # momentum in m_e c
-  vrn = pr0/Gamma(pr0) # velocity in c
+  if pr0 > 1:
+    vrn = vr_0
+  else:
+    vrn = pr0/Gamma(pr0) # velocity in c
   t = t0 # start time in 1/w_p
   dt = .0005 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
   pz0 = pz_0
-  vzn = pz0/Gamma(pz0) - 1.0 
+  if pz_0 > 1:
+    vzn = vz_0
+  else:
+    vzn = pz0/Gamma(pz0) - 1.0 
   print("\n Initial z = ",zn)
   
   dvz = 0.0
@@ -173,6 +182,8 @@ def main():
     pz_0 = init.pz_0
     xi_0 = init.xi_0
     Model = init.SHModel
+    vz_0 = init.vz_0
+    vr_0 = init.vr_0
     track = init.track
     z_0 = xi_0 + t0
   elif len(sys.argv) == 1:
@@ -189,7 +200,7 @@ def main():
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,z_0,pz_0,Model)
+  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
   plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
 
 main()
