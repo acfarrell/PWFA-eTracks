@@ -25,70 +25,132 @@ N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
 # Retrieve simulated fields from OSIRIS simulations
-r_sim, z_sim, E_sim, t0 = osiris.transE()
+r_sim, z_sim, t0 = osiris.axes()
+Er_sim = osiris.transE()
+Ez_sim = osiris.longE()
+Bphi_sim = osiris.phiB()
 
-def EField(r,z,SHMmodel):
-  #SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
-  #SHMmodel = false returns the simulated data from OSIRIS
-  if SHMmodel:
-    E = -1.0/4.0 * r
-    return E
+
+def EField(r,z,axis,SHMmodel):
+  # SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
+  # SHMmodel = false returns the simulated data from OSIRIS
+  # axis = 1 refers to xi-axis (longitudinal) field
+  # axis = 2 refers to r-axis (transverse) field
+  if axis == 2:
+    if SHMmodel:
+      E = -1.0/4.0 * r
+      return E
+    else:
+      zDex = find_nearest_index(z_sim, z)
+      rDex = find_nearest_index(r_sim, r)
+      return -Er_sim[rDex,zDex]
+  elif axis == 1:
+    if SHMmodel:
+      return 0.0
+    else:
+      zDex = find_nearest_index(z_sim, z)
+      rDex = find_nearest_index(r_sim, r)
+      return -Ez_sim[rDex, zDex]
+
+def BForce(r,z,v1,v2,axis,model):
+  if model:# or z - t0 > 5:
+    return 0.0
+
+  zDex = find_nearest_index(z_sim, z)
+  rDex = find_nearest_index(r_sim, r)
+  BField =  Bphi_sim[rDex, zDex]
+  if axis == 1:
+    return -1.0 * v2 * BField
   else:
-    zDex = find_nearest_index(z_sim, z)
-    rDex = find_nearest_index(r_sim, r)
-    return -E_sim[rDex,zDex]
-def Momentum(r, z, dt, p_0,model):
-  #Returns the momentum at t + dt, in units of m_e 
-  return p_0 +  EField(r,z,model) * dt
+    return 1.0 * (v1 + 1) * BField
 
-def Velocity(p):
-  #returns the velocity from the momentum, in units of c
-  return p
+def Velocity(r, z, dt, vi, vj, dvi, dvj, start, model):
+  #returns the velocity from the momentum, in units of c in axis direction
+  Fi = (EField(r, z, 1, model) + BForce(r,z,vi,vj,1,model))
+  Fj = (EField(r, z, 2, model) + BForce(r,z,vi,vj,2,model))
+  #Correct for frame moving in +z at speed of light
+  vi = vi + 1
+  v = math.sqrt(vi**2 + vj**2)
+  print("velocity = ", v)
+  if abs(v) > 1:
+    print("Error: v exceeds light speed")
+#    return 0.0,0.0
+  vdv = (vi*dvi + vj*dvj)
+  dvi = (Fi*dt / Gamma(v) - Gamma(v)**2 * vi *vj* dvj)/(1+Gamma(v)**2 * vi**2)
+  dvj = (Fj*dt / Gamma(v) - Gamma(v)**2 * vj *vi* dvi)/(1+Gamma(v)**2 * vj**2)
+  #dvi = dt/Gamma(v) * (Fj*Gamma(v)**2 * vi * vj - Fi*(1+Gamma(v)**2*vj**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  #dvj = dt/Gamma(v) * (Fi*Gamma(v)**2 * vi * vj - Fj*(1+Gamma(v)**2*vi**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  
+  print("dvi = ",dvi,", dvj = ",dvj)
+  return dvi, dvj
 
-def GetTrajectory(r_0,p_0,z_0,SHM):
+def Gamma(v):
+  return  1 / math.sqrt(1 - v**2)
+
+def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #returns array of r v. t
 
-  r_dat = []
-  z_dat = []
-  t_dat = []
-  xi_dat = []
-  E_dat = []
+  r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
 
   rn = r_0 # position in c/w_p
-  pn = p_0 # momentum in m_e c
-  vn = Velocity(pn) # velocity in c
+  pr0 = pr_0 # momentum in m_e c
+  if pr0 > 1:
+    vrn = vr_0
+  else:
+    vrn = pr0/Gamma(pr0) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .001 # time step in 1/w_p
+  dt = .0005 # time step in 1/w_p
+  
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
+  pz0 = pz_0
+  if pz_0 > 1:
+    vzn = vz_0
+  else:
+    vzn = pz0/Gamma(pz0) - 1.0 
   print("\n Initial z = ",zn)
   
+  dvz = 0.0
+  dvr = 0.0
+
   old_r = r_0 - 1.0
   turnRad = r_0
   xin = zn - t0
-
+    
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
+  i = 0 #iteration counter
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
-    pn = Momentum(rn, zn, dt, pn,SHM)
-    vn = Velocity(pn)
-          
+    dvz, dvr = Velocity(rn, zn, dt, vzn, vrn, dvz, dvr, i % 2, SHM)
+    vzn = vzn + dvz
+    vrn = vrn + dvr
+
     #Add former data points to the data lists
     r_dat.append(rn)
     t_dat.append(t)
     z_dat.append(zn)
-    xi_dat.append(z0 - t)
-    E_dat.append( EField(rn, zn, SHM) )
+    xi_dat.append(xin)
+    E_dat.append( EField(rn, zn, 2, SHM) )
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
 
     #Add the distance traveled in dt to r, increase t by dt
-    zn -= dt
-    rn += vn*dt
+    zn += vzn * dt
+    rn += vrn * dt
     t += dt
+    xin = zn - t0
+    i += 1
+    #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
+
+    if xin < 0 or rn > 6:
+      print("Tracking quit due to xi or r out of range")
+      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+    if i > 10000000:
+      print("Tracking quit due to more than 10K iterations")
+      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
   print("\n Turn Radius = ",turnRad)
   return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
 
@@ -108,16 +170,21 @@ def find_nearest_index(array,value):
         return idx-1
     else:
         return idx
+
+
 def main():
-  #Print out program description and instructions:
   if len(sys.argv) == 2:
     input_fname = str(sys.argv[1])
     print("Using initial conditions from ",input_fname)
     init = importlib.import_module(input_fname)
     r_0 = init.r_0
-    p_0 = init.p_0
+    pr_0 = init.pr_0
+    pz_0 = init.pz_0
     xi_0 = init.xi_0
     Model = init.SHModel
+    vz_0 = init.vz_0
+    vr_0 = init.vr_0
+    track = init.track
     z_0 = xi_0 + t0
   elif len(sys.argv) == 1:
   #Get initial position and momentum from user input:
@@ -125,12 +192,15 @@ def main():
     p_0 = float(input("Initial transverse momentum (m_e c): "))        
     z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
     Model = bool(input("Use SHM Model (True/False): "))
+    track = 'med'
   else:
     print("Improper number of arguments. Expected 'python3 eTracks.py' or 'python3 eTracks.py <fname>'")
     return
+
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,p_0,z_0,Model)
-  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, E_sim, r_sim,z_sim,Model)
+  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
+  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
+
 main()
