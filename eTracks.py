@@ -15,6 +15,7 @@ import matplotlib.colors as col
 # include file imports
 import include.plotTracks as plotTracks 
 import include.getOsirisFields as osiris
+import include.plotErrors as plotErrors
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
@@ -30,6 +31,10 @@ Er_sim = osiris.transE()
 Ez_sim = osiris.longE()
 Bphi_sim = osiris.phiB()
 
+dvi_dat = []
+dvj_dat = []
+dviRatio = []
+dvjRatio = []
 
 def EField(r,z,axis,SHMmodel):
   # SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
@@ -69,6 +74,8 @@ def Velocity(r, z, dt, vi, vj, dvi, dvj, start, model):
   Fi = (EField(r, z, 1, model) + BForce(r,z,vi,vj,1,model))
   Fj = (EField(r, z, 2, model) + BForce(r,z,vi,vj,2,model))
   #Correct for frame moving in +z at speed of light
+  dvi0 = dvi
+  dvj0 = dvj
   vi = vi + 1
   v = math.sqrt(vi**2 + vj**2)
   print("velocity = ", v)
@@ -78,10 +85,12 @@ def Velocity(r, z, dt, vi, vj, dvi, dvj, start, model):
   vdv = (vi*dvi + vj*dvj)
   dvi = (Fi*dt / Gamma(v) - Gamma(v)**2 * vi *vj* dvj)/(1+Gamma(v)**2 * vi**2)
   dvj = (Fj*dt / Gamma(v) - Gamma(v)**2 * vj *vi* dvi)/(1+Gamma(v)**2 * vj**2)
-  #dvi = dt/Gamma(v) * (Fj*Gamma(v)**2 * vi * vj - Fi*(1+Gamma(v)**2*vj**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
-  #dvj = dt/Gamma(v) * (Fi*Gamma(v)**2 * vi * vj - Fj*(1+Gamma(v)**2*vi**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
   
   print("dvi = ",dvi,", dvj = ",dvj)
+  dvi_dat.append(dvi)
+  dvj_dat.append(dvj)
+  dviRatio.append(abs((dvi0 - dvi)/dvi))
+  dvjRatio.append(abs((dvj0 - dvj)/dvj))
   return dvi, dvj
 
 def Gamma(v):
@@ -99,7 +108,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   else:
     vrn = pr0/Gamma(pr0) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .0005 # time step in 1/w_p
+  dt = .005 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
@@ -202,5 +211,5 @@ def main():
   #Determine trajectory, creates n-length lists of data points
   r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
   plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
-
+  plotErrors.plot(xi_dat,dvi_dat,dvj_dat,dviRatio,dvjRatio)
 main()
