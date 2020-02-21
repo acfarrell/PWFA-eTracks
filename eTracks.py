@@ -31,89 +31,72 @@ Ez_sim = osiris.longE()
 Bphi_sim = osiris.phiB()
 
 
-def EField(r,z,axis,SHMmodel):
-  # SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
-  # SHMmodel = false returns the simulated data from OSIRIS
+def EField(r,z,axis):
   # axis = 1 refers to xi-axis (longitudinal) field
   # axis = 2 refers to r-axis (transverse) field
   if axis == 2:
-    if SHMmodel:
-      E = -1.0/4.0 * r
-      return E
-    else:
-      zDex = find_nearest_index(z_sim, z)
-      rDex = find_nearest_index(r_sim, r)
-      return -Er_sim[rDex,zDex]
+    zDex = find_nearest_index(z_sim, z)
+    rDex = find_nearest_index(r_sim, r)
+    return -1*Er_sim[rDex,zDex]
   elif axis == 1:
-    if SHMmodel:
-      return 0.0
-    else:
-      zDex = find_nearest_index(z_sim, z)
-      rDex = find_nearest_index(r_sim, r)
-      return -Ez_sim[rDex, zDex]
+    zDex = find_nearest_index(z_sim, z)
+    rDex = find_nearest_index(r_sim, r)
+    return -1*Ez_sim[rDex, zDex]
 
-def BForce(r,z,v1,v2,axis,model):
-  if model:# or z - t0 > 5:
-    return 0.0
-
+def BForce(r,z,vz,vr,axis):
   zDex = find_nearest_index(z_sim, z)
   rDex = find_nearest_index(r_sim, r)
   BField =  Bphi_sim[rDex, zDex]
   if axis == 1:
-    return -1.0 * v2 * BField
+    return -1.0 * vr * BField
   else:
-    return 1.0 * (v1 + 1) * BField
+    return 1.0 * (vz + 1 ) * BField #+1 on v
 
-def Velocity(r, z, dt, vi, vj, dvi, dvj, start, model):
+def Momentum(r, z, dt, pr, pz):
   #returns the velocity from the momentum, in units of c in axis direction
-  Fi = (EField(r, z, 1, model) + BForce(r,z,vi,vj,1,model))
-  Fj = (EField(r, z, 2, model) + BForce(r,z,vi,vj,2,model))
+  p = math.sqrt(pr**2 + pz**2)
+  vr = Velocity(pr,p) 
   #Correct for frame moving in +z at speed of light
-  vi = vi + 1
-  v = math.sqrt(vi**2 + vj**2)
-  print("velocity = ", v)
-  if abs(v) > 1:
-    print("Error: v exceeds light speed")
-#    return 0.0,0.0
-  vdv = (vi*dvi + vj*dvj)
-  dvi = (Fi*dt / Gamma(v) - Gamma(v)**2 * vi *vj* dvj)/(1+Gamma(v)**2 * vi**2)
-  dvj = (Fj*dt / Gamma(v) - Gamma(v)**2 * vj *vi* dvi)/(1+Gamma(v)**2 * vj**2)
-  #dvi = dt/Gamma(v) * (Fj*Gamma(v)**2 * vi * vj - Fi*(1+Gamma(v)**2*vj**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
-  #dvj = dt/Gamma(v) * (Fi*Gamma(v)**2 * vi * vj - Fj*(1+Gamma(v)**2*vi**2))*((Gamma(v)**2*vi*vj)**2 - (1+Gamma(v)**2*vi**2)*(1+Gamma(v)**2*vj**2))
+  vz = Velocity(pz,p) 
   
-  print("dvi = ",dvi,", dvj = ",dvj)
-  return dvi, dvj
+  Fz = (EField(r, z, 1) + BForce(r,z,vz,vr,1))
+  Fr = (EField(r, z, 2) + BForce(r,z,vz,vr,2))
+  print("Fz = ",Fz,", Fr = ",Fr)
+  pz = pz + Fz * dt
+  pr = pr + Fr * dt
+  p = math.sqrt(pr**2 + pz**2)
+  #print("pz = ",pz,", pr = ",pr)
+  return pz, pr, p
 
-def Gamma(v):
-  return  1 / math.sqrt(1 - v**2)
+def Velocity(pi,p):
+  v = pi / Gamma(p)
+  return v
+
+def Gamma(p):
+  return  math.sqrt(1 + p**2)
 
 def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #returns array of r v. t
 
   r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
-
+  p = math.sqrt(pr_0**2 + pz_0**2)
   rn = r_0 # position in c/w_p
-  pr0 = pr_0 # momentum in m_e c
-  if pr0 > 1:
-    vrn = vr_0
-  else:
-    vrn = pr0/Gamma(pr0) # velocity in c
+  pr = pr_0 # momentum in m_e c
+  vrn = pr_0/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .0005 # time step in 1/w_p
+  dt = .005 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
-  pz0 = pz_0
-  if pz_0 > 1:
-    vzn = vz_0
-  else:
-    vzn = pz0/Gamma(pz0) - 1.0 
+  pz = pz_0 #- Gamma(p)
+  vzn = pz/Gamma(p) -1 
+  pz = Gamma(p) * (vzn)
   print("\n Initial z = ",zn)
   
   dvz = 0.0
   dvr = 0.0
 
-  old_r = r_0 - 1.0
+  old_r = r_0 #- 1.0
   turnRad = r_0
   xin = zn - t0
     
@@ -123,16 +106,16 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
-    dvz, dvr = Velocity(rn, zn, dt, vzn, vrn, dvz, dvr, i % 2, SHM)
-    vzn = vzn + dvz
-    vrn = vrn + dvr
+    pz, pr, p = Momentum(rn, zn, dt, pr, pz)
+    vzn = Velocity(pz,p)  
+    vrn = Velocity(pr,p)
 
     #Add former data points to the data lists
     r_dat.append(rn)
     t_dat.append(t)
     z_dat.append(zn)
     xi_dat.append(xin)
-    E_dat.append( EField(rn, zn, 2, SHM) )
+    E_dat.append( EField(rn, zn, 2) )
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
