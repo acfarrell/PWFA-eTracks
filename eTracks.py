@@ -25,43 +25,43 @@ N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
 # Retrieve simulated fields from OSIRIS simulations
-r_sim, z_sim, t0 = osiris.axes()
+r_sim, xi_sim, t0 = osiris.axes()
 Er_sim = osiris.transE()
 Ez_sim = osiris.longE()
 Bphi_sim = osiris.phiB()
 
 
-def EField(r,z,axis):
+def EField(r,xi,axis):
   # axis = 1 refers to xi-axis (longitudinal) field
   # axis = 2 refers to r-axis (transverse) field
   if axis == 2:
-    zDex = find_nearest_index(z_sim, z)
+    xiDex = find_nearest_index(xi_sim, xi)
     rDex = find_nearest_index(r_sim, r)
-    return -1*Er_sim[rDex,zDex]
+    return -1*Er_sim[rDex,xiDex]
   elif axis == 1:
-    zDex = find_nearest_index(z_sim, z)
+    xiDex = find_nearest_index(xi_sim, xi)
     rDex = find_nearest_index(r_sim, r)
-    return -1*Ez_sim[rDex, zDex]
+    return -1*Ez_sim[rDex, xiDex]
 
-def BForce(r,z,vz,vr,axis):
-  zDex = find_nearest_index(z_sim, z)
+def BForce(r,xi,vz,vr,axis):
+  xiDex = find_nearest_index(xi_sim, xi)
   rDex = find_nearest_index(r_sim, r)
-  BField =  Bphi_sim[rDex, zDex]
+  BField =  Bphi_sim[rDex, xiDex]
   if axis == 1:
     return -1.0 * vr * BField
   else:
-    return 1.0 * (vz + 1 ) * BField #+1 on v
+    return  1.0 * vz * BField
 
-def Momentum(r, z, dt, pr, pz):
+def Momentum(r, xi, dt, pr, pz):
   #returns the velocity from the momentum, in units of c in axis direction
   p = math.sqrt(pr**2 + pz**2)
   vr = Velocity(pr,p) 
   #Correct for frame moving in +z at speed of light
   vz = Velocity(pz,p) 
   
-  Fz = (EField(r, z, 1) + BForce(r,z,vz,vr,1))
-  Fr = (EField(r, z, 2) + BForce(r,z,vz,vr,2))
-  print("Fz = ",Fz,", Fr = ",Fr)
+  Fz = (EField(r, xi, 1) + BForce(r,xi,vz,vr,1))
+  Fr = (EField(r, xi, 2) + BForce(r,xi,vz,vr,2))
+  #print("Fz = ",Fz,", Fr = ",Fr)
   pz = pz + Fz * dt
   pr = pr + Fr * dt
   p = math.sqrt(pr**2 + pz**2)
@@ -88,9 +88,8 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
-  pz = pz_0 #- Gamma(p)
-  vzn = pz/Gamma(p) -1 
-  pz = Gamma(p) * (vzn)
+  pz = pz_0 
+  vzn = pz/Gamma(p) 
   print("\n Initial z = ",zn)
   
   dvz = 0.0
@@ -106,7 +105,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   while rn > 0:
 
   #Determine Momentum and velocity at this time and position
-    pz, pr, p = Momentum(rn, zn, dt, pr, pz)
+    pz, pr, p = Momentum(rn, xin, dt, pr, pz)
     vzn = Velocity(pz,p)  
     vrn = Velocity(pr,p)
 
@@ -124,9 +123,9 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     zn += vzn * dt
     rn += vrn * dt
     t += dt
-    xin = zn - t0
+    xin = zn - t
     i += 1
-    #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
+    print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
 
     if xin < 0 or rn > 6:
       print("Tracking quit due to xi or r out of range")
@@ -184,6 +183,6 @@ def main():
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
   r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
-  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
+  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,xi_sim,Model,track)
 
 main()

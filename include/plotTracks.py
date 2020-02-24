@@ -8,7 +8,7 @@ import seaborn as sea
 import matplotlib.cm as cm
 import include.plotSimTracks as plotSimTracks
 
-def plot(r, z, t, xi, E, r_sim, z_sim, SHM, track):
+def plot(r, z, t, xi, E, r_sim, xi_sim, SHM, track):
   plt.style.use('seaborn-poster')
 
   fig, ax = plt.subplots()
@@ -19,9 +19,9 @@ def plot(r, z, t, xi, E, r_sim, z_sim, SHM, track):
     cbar.set_label('Electric Field ($m_e c\omega_p/e$)')
     ax.set_xlabel("z ($c/\omega_p$)")
     ax.set_ylabel("r ($c/\omega_p$)")
-    ax.plot(z,r,'k')
+    ax.plot(xi,r,'k')
   else:
-    colors = ax.pcolormesh(z_sim - 858.95 ,r_sim,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+    colors = ax.pcolormesh(xi_sim ,r_sim,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
     
     cbar = fig.colorbar(colors,ax=ax)
     cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
@@ -31,7 +31,7 @@ def plot(r, z, t, xi, E, r_sim, z_sim, SHM, track):
     
     ax.plot(xi,r,'k',label = "Simulated")
 
-  plt.xlim(z_sim[0]- 858.95, z_sim[-1]-858.95)
+  plt.xlim(xi_sim[0], xi_sim[-1])
   xi_OSIRIS, r_OSIRIS = plotSimTracks.get_xir(track)
   ax.plot(xi_OSIRIS, r_OSIRIS, 'r:', label="OSIRIS")
   ax.legend()
