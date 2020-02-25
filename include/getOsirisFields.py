@@ -18,12 +18,13 @@ def axes():
   a1_bounds = f['AXIS']['AXIS1']
   a2_bounds = f['AXIS']['AXIS2']
   
-  z_dat = np.linspace(a1_bounds[0],a1_bounds[1],len(Field_dat[0]))
-  r_dat = np.linspace(a2_bounds[0],a2_bounds[1],len(Field_dat))
-  
   t0 = 858.95 #time at which field data was simulated, constant for all fields
 
-  return r_dat, z_dat, t0 
+  xi_dat = np.linspace(a1_bounds[0] - t0,a1_bounds[1] - t0,len(Field_dat[0]))
+  r_dat = np.linspace(a2_bounds[0],a2_bounds[1],len(Field_dat))
+  
+
+  return r_dat, xi_dat, t0 
 
 def transE():
   return getField('data/EField_r.h5')

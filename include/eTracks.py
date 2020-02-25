@@ -29,7 +29,7 @@ W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 try: r_sim
 except NameError: r_sim = None
 if r_sim is None:
-  r_sim, z_sim, t0 = axes()
+  r_sim, xi_sim, t0 = axes()
   Er_sim = transE()
   Ez_sim = longE()
   Bphi_sim = phiB()
@@ -38,102 +38,95 @@ except NameError: bounds = None
 if bounds is None:
   bounds = getBounds()
 
-def EField(r,z,axis,SHMmodel):
-  # SHMmodel = true returns the electric field at position r (from Wei Lu's paper)
-  # SHMmodel = false returns the simulated data from OSIRIS
+def EField(r,xi,axis):
   # axis = 1 refers to xi-axis (longitudinal) field
   # axis = 2 refers to r-axis (transverse) field
   if axis == 2:
-    if SHMmodel:
-      E = -1.0/4.0 * r
-      return E
-    else:
-      zDex = find_nearest_index(z_sim, z)
-      rDex = find_nearest_index(r_sim, r)
-      return -Er_sim[rDex,zDex]
+    xiDex = find_nearest_index(xi_sim, xi)
+    rDex = find_nearest_index(r_sim, r)
+    return -Er_sim[rDex,xiDex]
   elif axis == 1:
-    if SHMmodel:
-      return 0.0
-    else:
-      zDex = find_nearest_index(z_sim, z)
-      rDex = find_nearest_index(r_sim, r)
-      return -Ez_sim[rDex, zDex]
+    xiDex = find_nearest_index(xi_sim, xi)
+    rDex = find_nearest_index(r_sim, r)
+    return -Ez_sim[rDex, xiDex]
 
-def BForce(r,z,v1,v2,axis,model):
-  if model:# or z - t0 > 5:
-    return 0.0
-
-  zDex = find_nearest_index(z_sim, z)
+def BForce(r,xi,v1,v2,axis):
+  xiDex = find_nearest_index(xi_sim, xi)
   rDex = find_nearest_index(r_sim, r)
-  BField =  Bphi_sim[rDex, zDex]
+  BField =  Bphi_sim[rDex, xiDex]
   if axis == 1:
     return -1.0 * v2 * BField
   else:
-    return 1.0 * (v1 + 1) * BField
+    return 1.0 * v1 * BField
 
-def Velocity(r, z, dt, v1, v2, axis, model):
-  #returns the velocity from the momentum, in units of c
-  F = (EField(r, z, axis, model) + BForce(r,z,v1,v2,axis,model))
-  if axis == 1:
-    v = v1 + 1
-  else:
-    v = v2
-  if abs(v) > 1:
-    print("Error: v exceeds light speed")
-    return 0
-  dv = (F * dt ) / (Gamma(v) + v**2 * Gamma(v)**3 )
-  if axis == 1:
-    return v - 1 + dv
-  return v + dv
+def Momentum(r, xi, dt, pr, pz):
+  p = math.sqrt(pr**2 + pz**2)
+  vr = Velocity(pr,p)
+  vz = Velocity(pz,p)
 
-def Gamma(v):
-  return  1 / math.sqrt(1 - v**2)
+  Fz = (EField(r, xi, 1) + BForce(r,xi,vz,vr,1))
+  Fr = (EField(r, xi, 2) + BForce(r,xi,vz,vr,2))
+  #print("Fz = ",Fz,", Fr = ",Fr)
+  pz = pz + Fz * dt
+  pr = pr + Fr * dt
+  p = math.sqrt(pr**2 + pz**2)
+  #print("pz = ",pz,", pr = ",pr)
+  return pz, pr, p
 
-def outOfBounds(r,z):
-  zDex = find_nearest_index(z_sim, z)
+def Velocity(pi,p):
+  v = pi / Gamma(p)
+  return v
+
+def Gamma(p):
+  return  math.sqrt(1 + p**2)
+
+def outOfBounds(r,xi):
+  xiDex = find_nearest_index(xi_sim, xi)
   rDex = find_nearest_index(r_sim, r)
   
-  if bounds[rDex, zDex] == 1:
+  if bounds[rDex, xiDex] == 1:
     #    print(' electron is out of bounds')
     return True
   return False
 
-def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,plot,num):
+def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
   #returns array of r v. t
-  SHM = False
   r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
-
+  p = math.sqrt(pr_0**2 + pz_0**2)
   rn = r_0 # position in c/w_p
-  pr0 = pr_0 # momentum in m_e c
-  vrn = vr_0 # velocity in c
+  pr = pr_0 # momentum in m_e c
+  vrn = pr_0/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .001 # time step in 1/w_p
+  dt = .005 # time step in 1/w_p
   
-  z0 = GetInitialZ(z_0,r_0)
-  zn = z0
-  pz0 = pz_0
-  vzn = vz_0 - 1.0 
+  z0 = xi_0 + t0
+  zn = xi_0 + t0
+  pz = pz_0 
+  vzn = pz/Gamma(p) 
   
-  old_r = r_0 - 1.0
+  dvz = 0.0
+  dvr = 0.0
+
+  old_r = r_0 #- 1.0
   turnRad = r_0
-  xin = zn - t0
+  xin = xi_0
   
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
   while rn > 0:
-
-  #Determine Momentum and velocity at this time and position
-    vrn = Velocity(rn, zn, dt, vzn, vrn,2, SHM)
-        
-    vzn = Velocity(rn, zn, dt, vzn, vrn, 1, SHM)
+  
+    #Determine Momentum and velocity at this time and position
+    pz, pr, p = Momentum(rn, xin, dt, pr, pz)
+    vzn = Velocity(pz,p)  
+    vrn = Velocity(pr,p)
 
     #Add former data points to the data lists
     r_dat.append(rn)
     t_dat.append(t)
     z_dat.append(zn)
     xi_dat.append(xin)
-    E_dat.append( EField(rn, zn, 2, SHM) )
+    E_dat.append( EField(rn, xin, 2) )
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
@@ -142,9 +135,10 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,plot,num):
     zn += vzn * dt
     rn += vrn * dt
     t += dt
-    xin = zn - t0
+    xin = zn - t
     i += 1
-    if outOfBounds(rn,zn) or rn > 6 or xin < 0:
+    
+    if outOfBounds(rn,xin) or rn > 6 or xin < 0 or xin > 9:
       esc, xiPos = -1 , xin
       break
     else:
@@ -175,7 +169,7 @@ def plotTest(r,xi, esc, num):
 
   fig, ax = plt.subplots()
   #Make color axis of electric field
-  colors = ax.pcolormesh(z_sim - 858.95 ,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
+  colors = ax.pcolormesh(xi_sim,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
     
   cbar = fig.colorbar(colors,ax=ax)
   cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
@@ -184,7 +178,7 @@ def plotTest(r,xi, esc, num):
     
   ax.plot(xi,r,'k',label = "Simulated Trajectory")
 
-  plt.xlim(z_sim[0]- 858.95, z_sim[-1]-858.95)
+  plt.xlim(xi_sim[0], xi_sim[-1])
   ax.legend()
   if esc == 1:
     status = "Captured"

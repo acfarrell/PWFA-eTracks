@@ -13,7 +13,7 @@ import matplotlib.cm as cm
 
 def getBounds():
   Er = transE()
-  r,z,t0 = axes()
+  r,xi,t0 = axes()
   thresh = 0.#00001
   bounds = np.zeros((len(Er), len(Er[0])),dtype=int)
   for j in range(len(Er[0]) - 1):

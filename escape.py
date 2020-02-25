@@ -12,7 +12,7 @@ import include.eTracks as eTracks
 import include.getOsirisFields as osiris
 
 Er = osiris.transE()
-r,z,t0 = osiris.axes()
+r,xi,t0 = osiris.axes()
 
 def plot():
 
@@ -95,21 +95,19 @@ def main():
   eCount = 0
   num = 0
   for i in range(nrows):
-    j = int(ncols/2)
-    while j < ncols:
-      if Er[i,j] < -0.1:
+    for j in range(int(ncols/2), ncols):
+      if Er[i,j] < -0.5:
         eCount += 1
         plotTrack = False
-        if eCount % 1000 == 0:
+        if eCount % 50 == 0:
           plotTrack = True
           num +=1
         
-        escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],0,0,z[j],0,0,plotTrack, num)
-      if escaped[i,j] == 1:
-        trailBeamProf.append(xiPos)
-      print('Row ',i, "/",nrows," : ",eCount," electrons", end="\r", flush=True)
-      j += 1
-  np.savez(fname, r=r,xi=z - t0, esc=escaped, beam=trailBeamProf)
+        escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],0,0,xi[j],0,0,plotTrack, num)
+        if escaped[i,j] == 1:
+          trailBeamProf.append(xiPos)
+      print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
+  np.savez(fname, r=r,xi=xi, esc=escaped, beam=trailBeamProf)
   plot()
-#main()
-plot()
+main()
+#plot()
