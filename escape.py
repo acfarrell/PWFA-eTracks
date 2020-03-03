@@ -95,11 +95,13 @@ def main():
   eCount = 0
   num = 0
   for i in range(nrows):
-    for j in range(int(ncols/2), ncols):
+    #if i == 1:
+      #continue
+    for j in range(int(ncols/2) , ncols):
       if Er[i,j] < -0.5:
         eCount += 1
         plotTrack = False
-        if eCount % 50 == 0:
+        if eCount % 1000 == 0:
           plotTrack = True
           num +=1
         
@@ -108,6 +110,7 @@ def main():
           trailBeamProf.append(xiPos)
       print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
   np.savez(fname, r=r,xi=xi, esc=escaped, beam=trailBeamProf)
-  plot()
+  #plot()
+  print("\n Finished ")
 main()
 #plot()

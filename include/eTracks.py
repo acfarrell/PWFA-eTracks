@@ -17,6 +17,7 @@ from .getOsirisFields import axes, longE, transE, phiB
 from .getBounds import getBounds
 from .plotTracks import plot
 
+
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
 EC = 1.60217662e-19               #electron charge in C
@@ -91,7 +92,7 @@ def outOfBounds(r,xi):
 
 def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
   #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
+  r_dat, z_dat, t_dat, xi_dat = np.array([]),np.array([]),np.array([]),np.array([])
   p = math.sqrt(pr_0**2 + pz_0**2)
   rn = r_0 # position in c/w_p
   pr = pr_0 # momentum in m_e c
@@ -111,6 +112,8 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
   turnRad = r_0
   xin = xi_0
   
+  esc = 1
+
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
@@ -122,11 +125,10 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
     vrn = Velocity(pr,p)
 
     #Add former data points to the data lists
-    r_dat.append(rn)
-    t_dat.append(t)
-    z_dat.append(zn)
-    xi_dat.append(xin)
-    E_dat.append( EField(rn, xin, 2) )
+    r_dat = np.append(r_dat, rn)
+    t_dat = np.append(t_dat, t)
+    z_dat = np.append(z_dat, zn)
+    xi_dat = np.append(xi_dat, xin)
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
@@ -138,13 +140,15 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
     xin = zn - t
     i += 1
     
-    if outOfBounds(rn,xin) or rn > 6 or xin < 0 or xin > 9:
-      esc, xiPos = -1 , xin
+    if i > 10000 or rn > 6 or xin < 0 or xin > 9:
       break
-    else:
-      esc, xiPos = 1, xin
+    if outOfBounds(rn, xin): 
+      esc, xiPos = -1, xin
   if plot:
-    plotTest(np.array(r_dat), np.array(xi_dat), esc, num)        
+    plotTest(r_dat, xi_dat, esc, num)
+  if esc != -1:
+    xiPos = xin
+  del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos        
 
 def GetInitialZ(z_0,r_0):
@@ -163,8 +167,8 @@ def find_nearest_index(array,value):
         return idx-1
     else:
         return idx
-def plotTest(r,xi, esc, num):
 
+def plotTest(r,xi, esc, num):
   plt.style.use('seaborn-poster')
 
   fig, ax = plt.subplots()
@@ -187,3 +191,4 @@ def plotTest(r,xi, esc, num):
   ax.set_title('Electron Trajectory Marked '+status)
   fn = "plots/"+ str(num) + "_" + status + ".png"
   plt.savefig(fn,transparent=True)
+  plt.close()
