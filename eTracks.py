@@ -211,5 +211,5 @@ def main():
   #Determine trajectory, creates n-length lists of data points
   r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
   plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,z_sim,Model,track)
-  plotErrors.plot(xi_dat,dvi_dat,dvj_dat,dviRatio,dvjRatio)
+#  plotErrors.plot(xi_dat,dvi_dat,dvj_dat,dviRatio,dvjRatio)
 main()

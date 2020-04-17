@@ -4,12 +4,10 @@ import numpy as np
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import seaborn as sea
 import matplotlib.cm as cm
 import include.plotSimTracks as plotSimTracks
 
 def plot(t,dvi, dvj, dviRatio, dvjRatio):
-  plt.style.use('seaborn-poster')
 
   fig, ax = plt.subplots()
     
