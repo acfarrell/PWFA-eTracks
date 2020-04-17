@@ -4,12 +4,11 @@ import numpy as np
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import seaborn as sea
 import matplotlib.cm as cm
+import matplotlib.ticker as ticker
 import include.plotSimTracks as plotSimTracks
 
 def plot(r, z, t, xi, E, r_sim, xi_sim, SHM, track):
-  plt.style.use('seaborn-poster')
 
   fig, ax = plt.subplots()
   #Make color axis of electric field
@@ -23,8 +22,9 @@ def plot(r, z, t, xi, E, r_sim, xi_sim, SHM, track):
   else:
     colors = ax.pcolormesh(xi_sim ,r_sim,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
     
-    cbar = fig.colorbar(colors,ax=ax)
-    cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
+    tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+    cbar = fig.colorbar(colors,ax=ax,ticks=tick_locations, format=ticker.LogFormatterMathtext())
+    cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)') 
     ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
     ax.set_ylabel('r ($c/\omega_p$)')
     ax.set_title('Electron trajectory from simulation v. OSIRIS for ' + track + ' track')
@@ -33,7 +33,7 @@ def plot(r, z, t, xi, E, r_sim, xi_sim, SHM, track):
 
   plt.xlim(xi_sim[0], xi_sim[-1])
   xi_OSIRIS, r_OSIRIS = plotSimTracks.get_xir(track)
-  ax.plot(xi_OSIRIS, r_OSIRIS, 'r:', label="OSIRIS")
+  ax.plot(xi_OSIRIS, r_OSIRIS, 'c--', label="OSIRIS")
   ax.legend()
   if SHM:
     model = "SHM"

@@ -125,7 +125,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     t += dt
     xin = zn - t
     i += 1
-    print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
+    #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
 
     if xin < 0 or rn > 6:
       print("Tracking quit due to xi or r out of range")
