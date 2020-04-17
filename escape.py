@@ -1,5 +1,6 @@
 import sys
 import csv
+import time
 import numpy as np
 from tempfile import TemporaryFile as tmp
 
@@ -38,5 +39,7 @@ def main():
   np.savez(fname, r=r,xi=xi, esc=escaped, beam=trailBeamProf)
   #plot()
   print("\n Finished ")
+start_time = time.time()
 main()
+print("--- %s seconds ---" % (time.time() - start_time))
 #plot()

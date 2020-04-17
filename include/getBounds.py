@@ -8,8 +8,8 @@ from .getOsirisFields import axes, transE
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
-import seaborn as sea
 import matplotlib.cm as cm
+import matplotlib.ticker as ticker
 
 def getBounds():
   Er = transE()
@@ -31,7 +31,6 @@ def getBounds():
   return bounds
 
 def plotBounds():
-  plt.style.use('seaborn-poster')
   fig, ax  = plt.subplots()
   r, z, t0 = axes()
   E = transE()
@@ -42,9 +41,12 @@ def plotBounds():
   binary_cmaplist = [(0.,0.,0.,0.),(0.,0.,0.,.3)]
   binary_cmap = mpl.colors.LinearSegmentedColormap.from_list('Custom cmap', binary_cmaplist, 2)
   colors = ax.pcolormesh(z - t0 ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  cbar = fig.colorbar(colors,ax=ax,ticks=tick_locations, format=ticker.LogFormatterMathtext())
+  cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
+
+
   colors2 = ax.pcolormesh(z - t0 ,r,bounds,cmap=binary_cmap)
-  cbar = fig.colorbar(colors,ax=ax)
-  cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
   
   cbar2 = fig.colorbar(colors2,ax=ax)
   cbar2.set_ticks([])
@@ -57,7 +59,7 @@ def plotBounds():
   
   plt.xlim(z[0]- t0, z[-1]-t0)
   fn = "bounds.png"
-  plt.savefig(fn,transparent=True)
+  plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
 
-
+plotBounds()

@@ -5,6 +5,7 @@ import random
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
+import matplotlib.ticker as ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tempfile import TemporaryFile as tmp
 
@@ -14,6 +15,34 @@ Er = osiris.transE()
 r,xi,t0 = osiris.axes()
 
 def plot():
+  dat = np.load('data.npz')
+  xi = dat['xi']
+  escaped = dat['esc']
+  trail = dat['beam']
+  fig, ax  = plt.subplots()
+  E = osiris.transE()
+
+  #define binary color map
+  ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(0.0,1.0,0.0,1.0)]
+  ternary_cmap = mpl.colors.LinearSegmentedColormap.from_list('Custom cmap', ternary_cmaplist, 3)
+  
+  colors = ax.pcolormesh(xi ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+  
+  colors2 = ax.pcolormesh(xi ,r,escaped,cmap=ternary_cmap)
+  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  cbar = fig.colorbar(colors,ax=ax,ticks=tick_locations, format=ticker.LogFormatterMathtext())
+  cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
+
+  ax.set_ylabel('r ($c/\omega_p$)')
+  ax.set_title('Captured Electron Ionization Positions')
+  
+  plt.xlim(xi[0], xi[-1])
+  fn = "capturedRegion.png"
+  plt.savefig(fn,dpi=300,transparent=True)
+  plt.show()
+  return
+
+def plotBeams():
   dat = np.load('data.npz')
   xi = dat['xi']
   escaped = dat['esc']
@@ -38,8 +67,9 @@ def plot():
   
   colors2 = axs[0].pcolormesh(xi ,r,escaped,cmap=ternary_cmap)
   
-  cbar = fig.colorbar(colors,ax=axs.ravel().tolist())
-  cbar.set_label('Transverse Electric Field ($m_e c\omega_p / e$)')
+  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  cbar = fig.colorbar(colors,ax=axs.ravel().tolist(),ticks=tick_locations, format=ticker.LogFormatterMathtext())
+  cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
 
   axs[0].set_ylabel('r ($c/\omega_p$)')
   axs[0].set_title('Captured Electron Beam Test')
@@ -53,7 +83,7 @@ def plot():
   axs[1].set_ylim(None, counts.max()+20 )
   plt.xlim(xi[0], xi[-1])
   fn = "capturedBeam.png"
-  plt.savefig(fn,transparent=True)
+  plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
   return
 
@@ -115,9 +145,12 @@ def plotBeamOverlaps():
   ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
   plt.title("Trailing Beam Longitudinal Distribution")
   plt.xlim(xi[0], xi[-1])
-  plt.ylim(0, 600)
+  plt.ylim(0, 400)
   fn = "plots/overlap.png"
-  plt.savefig(fn,transparent=True)
+  plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
 
   return
+plot()
+plotBeams()
+plotBeamOverlaps()
