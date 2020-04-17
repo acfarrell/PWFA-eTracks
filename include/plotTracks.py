@@ -40,5 +40,5 @@ def plot(r, z, t, xi, E, r_sim, xi_sim, SHM, track):
   else:
     model = "simE"
   fn = "plots/"+model + "_"+track +".png"
-  plt.savefig(fn,transparent=True)
+  plt.savefig(fn,dpi=200,transparent=True)
   plt.show()
