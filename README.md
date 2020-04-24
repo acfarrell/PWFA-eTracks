@@ -17,3 +17,6 @@ python3 eTracks.py inputs.example
 ```
 ### Requirements
 This simulation requires the python packages h5py, importlib, numpy, and matplotlib.
+
+### Contact
+Contact Audrey Farrell (audreyclairefarrell@gmail.com) for questions about this code. Source code can be found at https://github.com/acfarrell/PWFA-eTracks
