@@ -28,7 +28,7 @@ def main():
       if Er[i,j] < -0.5:
         eCount += 1
         plotTrack = False
-        if eCount % 1000 == 0:
+        if eCount % 100 == 0:
           plotTrack = True
           num +=1
         
