@@ -30,10 +30,12 @@ def plot(r, z, t, xi, E, r_sim, xi_sim, SHM, track):
     ax.set_title('Electron trajectory from simulation v. OSIRIS for ' + track + ' track')
     
     ax.plot(xi,r,'k',label = "Simulated")
-
-  plt.xlim(xi_sim[0], xi_sim[-1])
+  plt.plot(xi[-1],r[-1],'ro', label = "Simulated ($\\xi_f,r_f$)")
+  plt.xlim(1.2,1.5)#xi_sim[0], xi_sim[-1])
+  plt.ylim(0,1)
   xi_OSIRIS, r_OSIRIS = plotSimTracks.get_xir(track)
   ax.plot(xi_OSIRIS, r_OSIRIS, 'c--', label="OSIRIS")
+  plt.plot(xi_OSIRIS[-1],r_OSIRIS[-1],'bo', label = "OSIRIS ($\\xi_f,r_f$)")
   ax.legend()
   if SHM:
     model = "SHM"

@@ -98,11 +98,13 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   old_r = r_0 #- 1.0
   turnRad = r_0
   xin = zn - t0
-    
+  old_xi = xin + 1  
+  
+
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
-  while rn > 0:
+  while abs(math.sqrt(vzn**2 + vrn**2) - 1) > 1e-6 :
 
   #Determine Momentum and velocity at this time and position
     pz, pr, p = Momentum(rn, xin, dt, pr, pz)
@@ -115,7 +117,9 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     z_dat.append(zn)
     xi_dat.append(xin)
     E_dat.append( EField(rn, zn, 2) )
-    #print("z = ", zn)
+    
+    old_xi = xin
+    print("vz = ", vzn)
     if rn > turnRad:
       turnRad = rn
 
@@ -126,7 +130,10 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     xin = zn - t
     i += 1
     #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
-
+    # Allow for crossing the beam axis
+    if rn < 0:
+      rn = -rn
+      pr = -pr
     if xin < 0 or rn > 6:
       print("Tracking quit due to xi or r out of range")
       return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
