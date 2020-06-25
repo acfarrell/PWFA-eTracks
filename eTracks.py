@@ -100,11 +100,10 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   xin = zn - t0
   old_xi = xin + 1  
   
-  print("10 MeV in normalized units = ", 1e7/(M_E*C**2))
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
-  while Gamma(p) < 10/.511 :
+  while Gamma(p) < 100/.511 :
 
   #Determine Momentum and velocity at this time and position
     pz, pr, p = Momentum(rn, xin, dt, pr, pz)
@@ -119,7 +118,6 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     E_dat.append( EField(rn, zn, 2) )
     
     old_xi = xin
-    print("vz = ", vzn)
     if rn > turnRad:
       turnRad = rn
 
