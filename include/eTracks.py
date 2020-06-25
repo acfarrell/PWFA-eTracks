@@ -22,7 +22,7 @@ from .plotTracks import plot
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
 EC = 1.60217662e-19               #electron charge in C
-EP_0 = 8.854187817                #vacuum permittivity in C/(V m)
+EP_0 = 8.854187817e-12                #vacuum permittivity in C/(V m)
 C = 299892458                     #speed of light in vacuum in m/s
 N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
@@ -118,7 +118,8 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
-  while rn > 0:
+  # Iterate while electron energy is under 100 MeV
+  while Gamma(p) < 100/.511:
   
     #Determine Momentum and velocity at this time and position
     pz, pr, p = Momentum(rn, xin, dt, pr, pz)
@@ -141,6 +142,10 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
     xin = zn - t
     i += 1
     
+    # Allow for crossing the beam axis
+    if rn < 0:
+      rn = -rn
+      pr = -pr
     if i > 10000 or rn > 6 or xin < 0 or xin > 9:
       break
     if outOfBounds(rn, xin): 
