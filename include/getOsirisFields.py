@@ -10,27 +10,25 @@ def getField(fname):
   Field_dat = f[field][:].astype(float)
   return Field_dat
 
-def axes(): 
-  f = h5.File('data/EField_r.h5',"r")
+def axes(fname): 
+  f = h5.File(fname,"r")
   datasetNames = [n for n in f.keys()] #Two Datasets: AXIS and e2
   field = datasetNames[-1]
   Field_dat = f[field][:].astype(float)
   a1_bounds = f['AXIS']['AXIS1']
   a2_bounds = f['AXIS']['AXIS2']
-  
-  t0 = 858.95 #time at which field data was simulated, constant for all fields
 
   xi_dat = np.linspace(a1_bounds[0] - t0,a1_bounds[1] - t0,len(Field_dat[0]))
   r_dat = np.linspace(a2_bounds[0],a2_bounds[1],len(Field_dat))
   
 
-  return r_dat, xi_dat, t0 
+  return r_dat, xi_dat 
 
-def transE():
-  return getField('data/EField_r.h5')
+def transE(fname):
+  return getField(fname)
 
-def longE():
-  return getField('data/EField_z.h5')
+def longE(fname):
+  return getField(fname)
 
-def phiB():
-  return getField('data/BField_phi.h5')
+def phiB(fname):
+  return getField(fname)

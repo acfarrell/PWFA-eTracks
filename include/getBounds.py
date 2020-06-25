@@ -11,9 +11,9 @@ import matplotlib.colors as col
 import matplotlib.cm as cm
 import matplotlib.ticker as ticker
 
-def getBounds():
-  Er = transE()
-  r,xi,t0 = axes()
+def getBounds(fname):
+  Er = transE(fname)
+  r,xi = axes(fname)
   thresh = 0.#00001
   bounds = np.zeros((len(Er), len(Er[0])),dtype=int)
   for j in range(len(Er[0]) - 1):

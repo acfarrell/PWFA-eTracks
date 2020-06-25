@@ -27,18 +27,20 @@ C = 299892458                     #speed of light in vacuum in m/s
 N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
-# Retrieve simulated fields from OSIRIS simulations
-try: r_sim
-except NameError: r_sim = None
-if r_sim is None:
-  r_sim, xi_sim, t0 = axes()
-  Er_sim = transE()
-  Ez_sim = longE()
-  Bphi_sim = phiB()
-try: bounds
-except NameError: bounds = None
-if bounds is None:
-  bounds = getBounds()
+# Retrieve fields from OSIRIS simulations
+def InitFields(Er_dat,Ez_dat,Bphi_dat,t):
+  try: r_sim
+  except NameError: r_sim = None
+  if r_sim is None:
+    global t0 = t
+    global r_sim, xi_sim = axes(Er_fname)
+    global Er_sim = Er_dat
+    global Ez_sim = Ez_dat
+    global Bphi_sim = Bphi_dat
+  try: bounds
+  except NameError: bounds = None
+  if bounds is None:
+    bounds = getBounds(Er_fname)
 
 def EField(r,xi,axis):
   # axis = 1 refers to xi-axis (longitudinal) field
@@ -91,19 +93,19 @@ def outOfBounds(r,xi):
     return True
   return False
 
-def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
+def GetTrajectory(r_0,xi_0):
   #returns array of r v. t
   r_dat, z_dat, t_dat, xi_dat = np.array([]),np.array([]),np.array([]),np.array([])
-  p = math.sqrt(pr_0**2 + pz_0**2)
+  p = 0
   rn = r_0 # position in c/w_p
-  pr = pr_0 # momentum in m_e c
+  pr = 0 # momentum in m_e c
   vrn = pr_0/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
   dt = .005 # time step in 1/w_p
   
   z0 = xi_0 + t0
   zn = xi_0 + t0
-  pz = pz_0 
+  pz = 0 
   vzn = pz/Gamma(p) 
   
   dvz = 0.0
@@ -150,12 +152,10 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
       break
     if outOfBounds(rn, xin): 
       esc, xiPos = -1, xin
-  if plot:
-    plotTest(r_dat, xi_dat, esc, num)
   if esc != -1:
     xiPos = xin
   del r_dat, xi_dat, z_dat, t_dat
-  return esc, xiPos        
+  return esc, xiPos
 
 def GetInitialZ(z_0,r_0):
   if z_0 == -1:
@@ -173,28 +173,3 @@ def find_nearest_index(array,value):
         return idx-1
     else:
         return idx
-
-def plotTest(r,xi, esc, num):
-
-  fig, ax = plt.subplots()
-
-  #Make color axis of electric field
-  colors = ax.pcolormesh(xi_sim,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
-  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
-  cbar = fig.colorbar(colors,ax=ax,ticks=tick_locations, format=ticker.LogFormatterMathtext())
-  cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')    
-  ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
-  ax.set_ylabel('r ($c/\omega_p$)')
-    
-  ax.plot(xi,r,'k',label = "Simulated Trajectory")
-
-  plt.xlim(xi_sim[0], xi_sim[-1])
-  ax.legend()
-  if esc == 1:
-    status = "Captured"
-  else:
-    status = "Escaped"
-  ax.set_title('Electron Trajectory Marked '+status)
-  fn = "plots/"+ str(num) + "_" + status + ".png"
-  plt.savefig(fn,dpi=300,transparent=True)
-  plt.close()
