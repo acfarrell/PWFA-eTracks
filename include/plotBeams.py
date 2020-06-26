@@ -11,8 +11,8 @@ from tempfile import TemporaryFile as tmp
 
 import getOsirisFields as osiris
 
-Er = osiris.transE()
-r,xi,t0 = osiris.axes()
+Er = osiris.transE('EField_r.h5')
+r,xi = osiris.axes('EField_r.h5',858.95)
 
 def plot():
   dat = np.load('data.npz')
@@ -20,7 +20,7 @@ def plot():
   escaped = dat['esc']
   trail = dat['beam']
   fig, ax  = plt.subplots()
-  E = osiris.transE()
+  E = osiris.transE('EField_r.h5')
 
   #define binary color map
   ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(0.0,1.0,0.0,1.0)]
@@ -45,22 +45,23 @@ def plot():
 
 
 def plotBeams():
-  dat = np.load('data.npz')
+  dat = np.load('FlatTop.npz')
   xi = dat['xi']
   escaped = dat['esc']
-  trail = []#dat['beam']
-  drive = []
+  trail = dat['trail']
+  drive = dat['drive']
   n = 0
-  for i in range(len(r)):
-    for j in range(len(xi)):
-      if escaped[i,j] == 1:
-        drive.append(xi[j])
-        trail.append(dat['beam'][j])
-        n += 1
-  print("Captured Driving Electrons = ", n)
+  #for i in range(len(r)):
+          #for j in range(len(xi)):
+            #if escaped[i,j] == 1:
+              #drive.append(xi[j])
+        #trail.append(dat['beam'][j])
+        #n += 1
+  #print("Captured Electron Ionization positions = ", n)
+  print("Captured Electrons = ", len(trail))
   plt.style.use('seaborn-poster')
   fig, axs  = plt.subplots(2,sharex=True)
-  E = osiris.transE()
+  E = Er 
 
   #define binary color map
   ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(0.0,1.0,0.0,1.0)]
@@ -78,16 +79,16 @@ def plotBeams():
   axs[0].set_title('Captured Electron Beam Test')
   axs[0].set_xlabel("$\\xi$ ($c/\omega_p$)")
   
-  binwidth = (max(drive) - min(drive))/20.0
+  binwidth = (max(drive) - min(drive))/10.0
   nbins = int( (max(trail) - min(trail))/binwidth)
-  axs[1].hist(drive, bins = 20,color='red',label="Driving Beam")
+  axs[1].hist(drive, bins = 10,color='red',label="Driving Beam")
   axs[1].hist(trail, bins = nbins,color='blue',label="Trailing Beam")
   counts, bin_edges = np.histogram(trail,bins=nbins)
   axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
   axs[1].legend()
   axs[1].set_ylim(None, counts.max()+20 )
   plt.xlim(xi[0], xi[-1])
-  fn = "capturedBeam.png"
+  fn = "capturedIonizedBeam.png"
   plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
   return
@@ -340,7 +341,7 @@ def plotCorrespondence():
   plt.show()
   return
 #plot()
-#plotBeams()
-plotBeamOverlapsLowR()
+plotBeams()
+#plotBeamOverlapsLowR()
 #plotCorrespondence()
 #plotBeamError()

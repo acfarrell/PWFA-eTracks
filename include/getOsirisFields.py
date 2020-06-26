@@ -4,14 +4,14 @@ import h5py as h5
 import numpy as np
 
 def getField(fname):
-  f = h5.File(fname,"r")
+  f = h5.File('data/'+fname,"r")
   datasetNames = [n for n in f.keys()] #Two Datasets: AXIS and e2
   field = datasetNames[-1]
   Field_dat = f[field][:].astype(float)
   return Field_dat
 
-def axes(fname): 
-  f = h5.File(fname,"r")
+def axes(fname,t0): 
+  f = h5.File('data/'+fname,"r")
   datasetNames = [n for n in f.keys()] #Two Datasets: AXIS and e2
   field = datasetNames[-1]
   Field_dat = f[field][:].astype(float)

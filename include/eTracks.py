@@ -27,20 +27,22 @@ C = 299892458                     #speed of light in vacuum in m/s
 N = 1e23                          #electron number density in 1/m^3
 W = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
+#t0,r_sim,xi_sim,Er_sim,Ez_sim,Bphi_sim,bounds = 0,[],[],[],[],[],[]
+
 # Retrieve fields from OSIRIS simulations
-def InitFields(Er_dat,Ez_dat,Bphi_dat,t):
-  try: r_sim
-  except NameError: r_sim = None
-  if r_sim is None:
-    global t0 = t
-    global r_sim, xi_sim = axes(Er_fname)
-    global Er_sim = Er_dat
-    global Ez_sim = Ez_dat
-    global Bphi_sim = Bphi_dat
-  try: bounds
-  except NameError: bounds = None
-  if bounds is None:
-    bounds = getBounds(Er_fname)
+def InitFields(Er_dat,Ez_dat,Bphi_dat,r,xi,t):
+  global t0 
+  global r_sim, xi_sim
+  global Er_sim
+  global Ez_sim
+  global Bphi_sim
+  t0 = t
+  r_sim, xi_sim = r,xi
+  Er_sim = Er_dat
+  Ez_sim = Ez_dat
+  Bphi_sim = Bphi_dat
+  global bounds
+  bounds = getBounds(Er_sim,r_sim,xi_sim,t0)
 
 def EField(r,xi,axis):
   # axis = 1 refers to xi-axis (longitudinal) field
@@ -99,7 +101,7 @@ def GetTrajectory(r_0,xi_0):
   p = 0
   rn = r_0 # position in c/w_p
   pr = 0 # momentum in m_e c
-  vrn = pr_0/Gamma(p) # velocity in c
+  vrn = pr/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
   dt = .005 # time step in 1/w_p
   
@@ -151,8 +153,7 @@ def GetTrajectory(r_0,xi_0):
     if i > 10000 or rn > 6 or xin < 0 or xin > 9:
       break
     if outOfBounds(rn, xin): 
-      esc, xiPos = -1, xin
-  if esc != -1:
+      esc = -1
     xiPos = xin
   del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos

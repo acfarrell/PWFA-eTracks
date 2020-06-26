@@ -11,9 +11,7 @@ import matplotlib.colors as col
 import matplotlib.cm as cm
 import matplotlib.ticker as ticker
 
-def getBounds(fname):
-  Er = transE(fname)
-  r,xi = axes(fname)
+def getBounds(Er,r,xi,t0):
   thresh = 0.#00001
   bounds = np.zeros((len(Er), len(Er[0])),dtype=int)
   for j in range(len(Er[0]) - 1):
@@ -62,4 +60,4 @@ def plotBounds():
   plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
 
-plotBounds()
+#plotBounds()
