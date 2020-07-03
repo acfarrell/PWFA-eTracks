@@ -45,8 +45,8 @@ def plot():
 
 
 def plotBeams():
-  dat = np.load('FlatTop.npz')
-  xi = dat['xi']
+  dat = np.load('FlatTop10K.npz')
+  #xi = dat['xi']
   escaped = dat['esc']
   trail = dat['trail']
   drive = dat['drive']
@@ -64,10 +64,10 @@ def plotBeams():
   E = Er 
 
   #define binary color map
-  ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(0.0,1.0,0.0,1.0)]
-  ternary_cmap = mpl.colors.LinearSegmentedColormap.from_list('Custom cmap', ternary_cmaplist, 3)
+  ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(1.0,1.0,0.0,1.0),(0.0,1.0,0.0,1.0)]
+  ternary_cmap = mpl.colors.LinearSegmentedColormap.from_list('Custom cmap', ternary_cmaplist, 4)
   
-  colors = axs[0].pcolormesh(xi ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+  colors = axs[0].pcolormesh(xi,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
   
   colors2 = axs[0].pcolormesh(xi ,r,escaped,cmap=ternary_cmap)
   

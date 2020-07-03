@@ -117,7 +117,7 @@ def GetTrajectory(r_0,xi_0):
   turnRad = r_0
   xin = xi_0
   
-  esc = 1
+  esc = 2
 
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
@@ -150,11 +150,13 @@ def GetTrajectory(r_0,xi_0):
     if rn < 0:
       rn = -rn
       pr = -pr
-    if i > 10000 or rn > 6 or xin < 0 or xin > 9:
+    if rn > 6 or xin < 0 or xin > 9:
+      esc = -1
       break
     if outOfBounds(rn, xin): 
-      esc = -1
+      esc = 1
     xiPos = xin
+  #print(esc)
   del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos
 

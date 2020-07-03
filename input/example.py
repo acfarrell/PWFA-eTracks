@@ -2,7 +2,7 @@
 # This filename is the input parameter of the beamSim.py file
 
 #Output File Name
-output_fname = "FlatTop" 
+output_fname = "FlatTop10K" 
 
 #Field Map File Names
 Er_fname = "EField_r.h5"

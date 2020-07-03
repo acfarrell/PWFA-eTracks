@@ -100,7 +100,7 @@ def main():
         if eCount > eTot:
           break
         escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],xi[j])
-        if escaped[i,j] == 1:
+        if escaped[i,j] == 1 or escaped[i,j] == 2 :
           trailBeamProf.append(xiPos)
           driveBeamProf.append(xi[j])
         print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)

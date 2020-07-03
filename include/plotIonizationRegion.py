@@ -21,29 +21,38 @@ C = 299892458                     #speed of light in vacuum in m/s
 N = 1e23                          #electron number density in 1/m^3
 WP = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
-Er = osiris.transE()
-Ez = osiris.longE()
+Er = osiris.transE("EField_r.h5")
+Ez = osiris.longE("EField_z.h5")
 
-r,xi,t0 = osiris.axes()
+r,xi = osiris.axes("EField_r.h5",858.95)
 
+#print((M_E * C * WP)/EC * 1e-9)  #Convert normalized field to GV/m
 
-def Wdt(E0):
+def W(E0):
   # Takes an electric field in normalized units and returns the ionization rate in s^-1
   # Define constants for calculating ionization rate for He
   gsE = 24.5 # unperturbed ground state energy in eV
   Z = 1 # charge number after ionization
   n = 0.746 # effective principal quantum number
   sigmaz = .47 # beam spread in z
-  dt = 3*sigmaz / WP # maximum duration of ionization
   
   E = E0 * (M_E * C * WP)/EC * 1e-9  #Convert normalized field to GV/m
 
   W0 = 1.52e15 * 4**n * gsE / (n * gamma(2*n)) * (20.5*gsE**(3/2))**(2*n-1)
   
   W = W0/((E)**(2*n-1)) * math.exp(-6.83*gsE**(3/2)/E)
-  if W*dt > 1:
-    return 1
-  return W * dt
+  return W 
+
+def ionRatio(i,j):
+  integral = 0
+  for n in range(int(len(xi)/2),j):
+    En = math.sqrt((Er[i,n])**2 + (Ez[i,n])**2)
+    integral = integral + W(En) * (xi[n] - xi[n-1]) / WP
+  ratio = 1 - math.exp(-1*integral)
+  if ratio > 1.0:
+    return 1.0
+  return ratio
+
 
 def plotIonizationRegion():
   dat = np.load('data.npz')
@@ -54,24 +63,23 @@ def plotIonizationRegion():
   eRatio  = np.zeros((len(r),len(xi)))
   n = 0
   for i in range(len(r)):
-    for j in range(len(xi)):
-      if escaped[i,j] == 1:
-        ri = r[i]
-        xii = xi[j]
-        xif = dat['beam'][j]
-        drive.append(xi[j])
-        trail.append(dat['beam'][j])
-        n += 1
-      E = math.sqrt(Er[i,j]**2 + Ez[i,j]**2)
-      if E != 0:
-        ratio =  Wdt(E)
-        #print(ratio)
-        if ratio > .1:
-                #print(ratio)
-          eRatio[i][j] = ratio
+    for j in range(int(len(xi)/2.0), len(xi)):
+            #if escaped[i,j] == 1:
+#        ri = r[i]
+#        xii = xi[j]
+#        xif = dat['beam'][j]
+#        drive.append(xi[j])
+#        trail.append(dat['beam'][j])
+#        n += 1
+      print('Row ',i, "/",len(r),", Column ", j,"/",len(xi), end="\r", flush=True)
+      #if Er[i,j] < -0.5:
+      ratio =  ionRatio(i,j)
+      if ratio > .1:
+                #      print(ratio)
+        eRatio[i][j] = ratio
   
   fig, ax  = plt.subplots(figsize=(9,6))
-  E = osiris.transE()
+  E = Er 
   eRatio = np.ma.masked_where(eRatio == 0, eRatio)
   cmap = plt.cm.OrRd
   cmap.set_bad(color = (1,1,1,0))
@@ -83,14 +91,14 @@ def plotIonizationRegion():
   cbar = fig.colorbar(colors,ax=ax,ticks=tick_locations, format=ticker.LogFormatterMathtext())
   cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
   cbar2 = fig.colorbar(colors2,ax=ax)
-  cbar2.set_label('$W\Delta t$, Fraction of Ionized Atoms')
+  cbar2.set_label('$N_e/N_0$, Fraction of Ionized Atoms')
 
   ax.set_ylabel('r ($c/\omega_p$)')
   ax.set_title('Ionization Region')
   ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
   
   #plt.xlim(xi[0], xi[-1])
-  plt.xlim(4,8)
+  plt.xlim(5,9)
   plt.ylim(0,4)
   fn = "ionizationRegion.png"
   plt.savefig(fn,dpi=300,transparent=True)
