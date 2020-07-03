@@ -84,7 +84,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   pr = pr_0 # momentum in m_e c
   vrn = pr_0/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .005 # time step in 1/w_p
+  dt = -.005 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
