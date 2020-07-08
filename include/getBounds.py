@@ -62,4 +62,4 @@ def plotBounds():
   plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
 
-plotBounds()
+#plotBounds()

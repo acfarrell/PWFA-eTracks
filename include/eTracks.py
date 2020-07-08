@@ -52,6 +52,8 @@ def EField(r,xi,axis):
     rDex = find_nearest_index(r_sim, r)
     return -Ez_sim[rDex, xiDex]
 
+trajectories = []
+
 def BForce(r,xi,v1,v2,axis):
   xiDex = find_nearest_index(xi_sim, xi)
   rDex = find_nearest_index(r_sim, r)
@@ -91,15 +93,15 @@ def outOfBounds(r,xi):
     return True
   return False
 
-def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
+def GetTrajectory(r_0,pr_0,xi_0,pz_0):
   #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat = np.array([]),np.array([]),np.array([]),np.array([])
+  r_dat, z_dat, t_dat, xi_dat = [],np.array([]),np.array([]),[]
   p = math.sqrt(pr_0**2 + pz_0**2)
   rn = r_0 # position in c/w_p
   pr = pr_0 # momentum in m_e c
   vrn = pr_0/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .005 # time step in 1/w_p
+  dt = -.005 # time step in 1/w_p
   
   z0 = xi_0 + t0
   zn = xi_0 + t0
@@ -118,7 +120,7 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
-  while rn > 0:
+  while True:
   
     #Determine Momentum and velocity at this time and position
     pz, pr, p = Momentum(rn, xin, dt, pr, pz)
@@ -126,10 +128,10 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
     vrn = Velocity(pr,p)
 
     #Add former data points to the data lists
-    r_dat = np.append(r_dat, rn)
+    r_dat.append(rn)
     t_dat = np.append(t_dat, t)
     z_dat = np.append(z_dat, zn)
-    xi_dat = np.append(xi_dat, xin)
+    xi_dat.append( xin)
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
@@ -140,15 +142,18 @@ def GetTrajectory(r_0,pr_0,vr_0,xi_0,pz_0,vz_0,plot,num):
     t += dt
     xin = zn - t
     i += 1
-    
+    if rn < 0:
+      rn = -rn
+      pr = -pr 
     if i > 10000 or rn > 6 or xin < 0 or xin > 9:
       break
     if outOfBounds(rn, xin): 
       esc, xiPos = -1, xin
-  if plot:
-    plotTest(r_dat, xi_dat, esc, num)
   if esc != -1:
     xiPos = xin
+  global trajectories
+  data = [r_dat,xi_dat]
+  trajectories.append(data)
   del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos        
 
@@ -169,7 +174,8 @@ def find_nearest_index(array,value):
     else:
         return idx
 
-def plotTest(r,xi, esc, num):
+
+def plotTest():
 
   fig, ax = plt.subplots()
 
@@ -180,16 +186,21 @@ def plotTest(r,xi, esc, num):
   cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')    
   ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
   ax.set_ylabel('r ($c/\omega_p$)')
-    
-  ax.plot(xi,r,'k',label = "Simulated Trajectory")
-
-  plt.xlim(xi_sim[0], xi_sim[-1])
+  
+  for i in range(len(trajectories)):
+    track = trajectories[i]
+    r = track[0][:]
+    xi = track[-1][:]
+    ax.plot(xi,r,'k',alpha=0.5,linewidth=1)
+  for i in range(len(trajectories)):
+    track = trajectories[i]
+    r = track[0][:]
+    xi = track[-1][:]
+    ax.plot(xi[0],r[0],'co',linewidth=1,markersize=.5)
+  plt.hlines(0.0707107,6,8,'g',linewidth=1,label="$\Delta\sigma r = 0.0707107$")
   ax.legend()
-  if esc == 1:
-    status = "Captured"
-  else:
-    status = "Escaped"
-  ax.set_title('Electron Trajectory Marked '+status)
-  fn = "plots/"+ str(num) + "_" + status + ".png"
+  plt.xlim(xi_sim[0], xi_sim[-1])
+  ax.set_title('Backtracked Electron Trajectories')
+  fn = "plots/beamTrajectories.png"
   plt.savefig(fn,dpi=300,transparent=True)
-  plt.close()
+  plt.show()
