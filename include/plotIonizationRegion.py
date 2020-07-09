@@ -45,7 +45,7 @@ def W(E0):
 
 def ionRatio(i,j):
   integral = 0
-  for n in range(int(len(xi)/2),j):
+  for n in range(len(xi)-1,j,-1):
     En = math.sqrt((Er[i,n])**2 + (Ez[i,n])**2)
     integral = integral + W(En) * (xi[n] - xi[n-1]) / WP
   ratio = 1 - math.exp(-1*integral)
