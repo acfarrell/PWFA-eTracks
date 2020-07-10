@@ -15,6 +15,7 @@ import matplotlib.colors as col
 # include file imports
 import include.plotTracks as plotTracks 
 import include.getOsirisFields as osiris
+import include.plotPhaseSpace as plotPhaseSpace
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
@@ -78,7 +79,7 @@ def Gamma(p):
 def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #returns array of r v. t
 
-  r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
+  r_dat, z_dat, t_dat, xi_dat, pr_dat, E_dat = [],[],[],[],[],[]
   p = math.sqrt(pr_0**2 + pz_0**2)
   rn = r_0 # position in c/w_p
   pr = pr_0 # momentum in m_e c
@@ -115,6 +116,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
     t_dat.append(t)
     z_dat.append(zn)
     xi_dat.append(xin)
+    pr_dat.append(pr)
     E_dat.append( EField(rn, zn, 2) )
     
     old_xi = xin
@@ -134,12 +136,12 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
       pr = -pr
     if xin < 0 or rn > 6:
       print("Tracking quit due to xi or r out of range")
-      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat),np.array(pr_dat), np.array(E_dat)        
     if i > 10000000:
       print("Tracking quit due to more than 10K iterations")
       return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
   print("\n Turn Radius = ",turnRad)
-  return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+  return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(pr_dat), np.array(E_dat)        
 
 def GetInitialZ(z_0,r_0):
   if z_0 == -1:
@@ -187,7 +189,7 @@ def main():
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
+  r_dat, z_dat, t_dat, xi_dat,pr_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
   plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,xi_sim,Model,track)
-
+  plotPhaseSpace.plot(r_dat, xi_dat, pr_dat, Er_sim, r_sim, xi_sim,track)
 main()
