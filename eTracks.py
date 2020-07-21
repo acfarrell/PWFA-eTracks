@@ -76,21 +76,21 @@ def Velocity(pi,p):
 def Gamma(p):
   return  math.sqrt(1 + p**2)
 
-def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
+def GetTrajectory(r_0,z_0):
   #returns array of r v. t
 
   r_dat, z_dat, t_dat, xi_dat, pr_dat, E_dat = [],[],[],[],[],[]
-  p = math.sqrt(pr_0**2 + pz_0**2)
+  p = 0
   rn = r_0 # position in c/w_p
-  pr = pr_0 # momentum in m_e c
-  vrn = pr_0/Gamma(p) # velocity in c
+  pr = 0 # momentum in m_e c
+  vrn = 0 # velocity in c
   t = t0 # start time in 1/w_p
   dt = .005 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
-  pz = pz_0 
-  vzn = pz/Gamma(p) 
+  pz = 0 
+  vzn = 0 
   print("\n Initial z = ",zn)
   
   dvz = 0.0
@@ -162,34 +162,18 @@ def find_nearest_index(array,value):
 
 
 def main():
-  if len(sys.argv) == 2:
-    input_fname = str(sys.argv[1])
-    print("Using initial conditions from ",input_fname)
-    init = importlib.import_module(input_fname)
-    r_0 = init.r_0
-    pr_0 = init.pr_0
-    pz_0 = init.pz_0
-    xi_0 = init.xi_0
-    Model = init.SHModel
-    vz_0 = init.vz_0
-    vr_0 = init.vr_0
-    track = init.track
-    z_0 = xi_0 + t0
-  elif len(sys.argv) == 1:
   #Get initial position and momentum from user input:
-    r_0 = float(input("Initial radius (c/w_p): "))
-    p_0 = float(input("Initial transverse momentum (m_e c): "))        
-    z_0 = float(input("Initial z-position (c/w_p) (Enter -1 for position of injection from OSIRIS): "))
-    Model = bool(input("Use SHM Model (True/False): "))
-    track = 'med'
-  else:
-    print("Improper number of arguments. Expected 'python3 eTracks.py' or 'python3 eTracks.py <fname>'")
-    return
+  all_dat = []
+  xi_0 = 6.8
+  t_0 = 858.95
+  z_0 = xi_0 + t_0
 
-  if Model:
-    print("Using SHM Model")
-  #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat,pr_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
-  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,xi_sim,Model,track)
-  plotPhaseSpace.plot(r_dat, xi_dat, pr_dat, Er_sim, r_sim, xi_sim,track)
+  rrange = [r * 0.1 for r in range(1,10)]
+  
+  for r in rrange:
+    trackName = "r="+str(r)
+    r_dat, z_dat, t_dat, xi_dat,pr_dat, E_dat = GetTrajectory(r,z_0)
+    plotPhaseSpace.plot(r_dat, xi_dat, pr_dat, Er_sim, r_sim, xi_sim,trackName)
+    all_dat.append([r_dat,pr_dat])
+  plotPhaseSpace.plotAll(all_dat)
 main()
