@@ -30,7 +30,7 @@ def main():
   driveBeamProf = []
   trailBeamProf = []
  
-  gamma = 10/.511
+  gamma = 50/.511
   pz0 = math.sqrt(gamma**2 - 1)
   
   fname = 'backtrackUniform.npz'
