@@ -103,7 +103,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
-  while Gamma(p) < 100/.511 :
+  while Gamma(p) > .1/.511 :
 
   #Determine Momentum and velocity at this time and position
     pz, pr, p = Momentum(rn, xin, dt, pr, pz)
