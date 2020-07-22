@@ -84,7 +84,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   pr = pr_0 # momentum in m_e c
   vrn = pr_0/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = -.005 # time step in 1/w_p
+  dt = .005 # time step in 1/w_p
   
   z0 = GetInitialZ(z_0,r_0)
   zn = z0
@@ -95,6 +95,7 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   dvz = 0.0
   dvr = 0.0
 
+  old_p = p + 1
   old_r = r_0 #- 1.0
   turnRad = r_0
   xin = zn - t0
@@ -103,8 +104,8 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
   #Iterate through position and time using a linear approximation 
   #until the radial position begins decreasing
   i = 0 #iteration counter
-  while Gamma(p) > .1/.511 :
-
+  while Gamma(p) < 100/.511 :
+    old_p = p
   #Determine Momentum and velocity at this time and position
     pz, pr, p = Momentum(rn, xin, dt, pr, pz)
     vzn = Velocity(pz,p)  
@@ -134,12 +135,84 @@ def GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,SHM):
       pr = -pr
     if xin < 0 or rn > 6:
       print("Tracking quit due to xi or r out of range")
-      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+      break
+      #return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
     if i > 10000000:
       print("Tracking quit due to more than 10K iterations")
-      return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+      break
+      #return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
   print("\n Turn Radius = ",turnRad)
-  return np.array(r_dat),np.array(z_dat),np.array(t_dat), np.array(xi_dat), np.array(E_dat)        
+  r_back, xi_back = GetBackwardsTrajectory(rn,pr,vrn,zn,pz,vzn,t, False)
+  return np.array(r_dat), np.array(xi_dat), r_back, xi_back        
+
+def GetBackwardsTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,t,SHM):
+  #returns array of r v. t
+
+  r_dat, z_dat, t_dat, xi_dat, E_dat = [],[],[],[],[]
+  p = math.sqrt(pr_0**2 + pz_0**2)
+  rn = r_0 # position in c/w_p
+  pr = pr_0 # momentum in m_e c
+  vrn = pr_0/Gamma(p) # velocity in c
+ # start time in 1/w_p
+  dt = -.005 # time step in 1/w_p
+  
+  z0 = GetInitialZ(z_0,r_0)
+  zn = z0
+  pz = pz_0 
+  vzn = pz/Gamma(p) 
+  print("\n Initial z = ",zn)
+  
+  dvz = 0.0
+  dvr = 0.0
+
+  old_p = p + 1
+  old_r = r_0 #- 1.0
+  turnRad = r_0
+  xin = zn - t
+  old_xi = xin + 1  
+  
+  #Iterate through position and time using a linear approximation 
+  #until the radial position begins decreasing
+  i = 0 #iteration counter
+  while True :
+    if p < 0.1 and p > old_p and xin > xi_sim[-1]/2.0:
+      break
+    old_p = p
+  #Determine Momentum and velocity at this time and position
+    pz, pr, p = Momentum(rn, xin, dt, pr, pz)
+    vzn = Velocity(pz,p)  
+    vrn = Velocity(pr,p)
+
+    #Add former data points to the data lists
+    r_dat.append(rn)
+    t_dat.append(t)
+    z_dat.append(zn)
+    xi_dat.append(xin)
+    E_dat.append( EField(rn, zn, 2) )
+    
+    old_xi = xin
+    if rn > turnRad:
+      turnRad = rn
+
+    #Add the distance traveled in dt to r, increase t by dt
+    zn += vzn * dt
+    rn += vrn * dt
+    t += dt
+    xin = zn - t
+    i += 1
+    #print("r = ",rn,  ", xi = ",xin, ", vz = ", vzn)
+    # Allow for crossing the beam axis
+    if rn < 0:
+      rn = -rn
+      pr = -pr
+    if xin < 0 or rn > 6:
+      print("Tracking quit due to xi or r out of range")
+      return np.array(r_dat), np.array(xi_dat)        
+    if i > 10000000:
+      print("Tracking quit due to more than 10K iterations")
+      return np.array(r_dat), np.array(xi_dat)        
+  print("\n Turn Radius = ",turnRad)
+  return np.array(r_dat), np.array(xi_dat)        
 
 def GetInitialZ(z_0,r_0):
   if z_0 == -1:
@@ -187,7 +260,7 @@ def main():
   if Model:
     print("Using SHM Model")
   #Determine trajectory, creates n-length lists of data points
-  r_dat, z_dat, t_dat, xi_dat, E_dat = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
-  plotTracks.plot(r_dat,z_dat, t_dat,xi_dat, Er_sim, r_sim,xi_sim,Model,track)
+  r_dat, xi_dat, r_back, xi_back = GetTrajectory(r_0,pr_0,vr_0,z_0,pz_0,vz_0,Model)
+  plotTracks.plotBackTrack(r_dat,xi_dat, r_back, xi_back, Er_sim, r_sim,xi_sim,Model,track)
 
 main()
