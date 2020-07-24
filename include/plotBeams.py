@@ -9,10 +9,10 @@ import matplotlib.ticker as ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tempfile import TemporaryFile as tmp
 
-import getOsirisFields as osiris
+import getQuickPICFields as osiris
 
-Er = osiris.transE('EField_r.h5')
-r,xi = osiris.axes('EField_r.h5',858.95)
+Er = osiris.transE('fields/exslicexz_00000100.h5')
+r,xi = osiris.axes('fields/exslicexz_00000100.h5')
 
 def plot():
   dat = np.load('data.npz')
@@ -20,7 +20,7 @@ def plot():
   escaped = dat['esc']
   trail = dat['beam']
   fig, ax  = plt.subplots()
-  E = osiris.transE('EField_r.h5')
+  E = Er
 
   #define binary color map
   ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(0.0,1.0,0.0,1.0)]
@@ -45,7 +45,7 @@ def plot():
 
 
 def plotBeams():
-  dat = np.load('FlatTop10K.npz')
+  dat = np.load('quickPIC_100.npz')
   #xi = dat['xi']
   escaped = dat['esc']
   trail = dat['trail']

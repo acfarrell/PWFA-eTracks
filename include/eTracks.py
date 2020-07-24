@@ -14,10 +14,11 @@ import matplotlib.colors as col
 import matplotlib.ticker as ticker
 
 # include file imports
-from .getOsirisFields import axes, longE, transE, phiB 
+from .getQuickPICFields import axes, longE, transE, phiB 
 from .getBounds import getBounds
 from .plotTracks import plot
 
+trajectories = []
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
@@ -36,6 +37,8 @@ def InitFields(Er_dat,Ez_dat,Bphi_dat,r,xi,t):
   global Er_sim
   global Ez_sim
   global Bphi_sim
+  global trajectories
+  trajectories = []
   t0 = t
   r_sim, xi_sim = r,xi
   Er_sim = Er_dat
@@ -97,7 +100,7 @@ def outOfBounds(r,xi):
 
 def GetTrajectory(r_0,xi_0):
   #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat = np.array([]),np.array([]),np.array([]),np.array([])
+  r_dat, z_dat, t_dat, xi_dat, vz_dat,p_dat = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
   p = 0
   rn = r_0 # position in c/w_p
   pr = 0 # momentum in m_e c
@@ -109,7 +112,6 @@ def GetTrajectory(r_0,xi_0):
   zn = xi_0 + t0
   pz = 0 
   vzn = pz/Gamma(p) 
-  
   dvz = 0.0
   dvr = 0.0
 
@@ -134,11 +136,14 @@ def GetTrajectory(r_0,xi_0):
     r_dat = np.append(r_dat, rn)
     t_dat = np.append(t_dat, t)
     z_dat = np.append(z_dat, zn)
+    vz_dat = np.append(vz_dat, vzn)
     xi_dat = np.append(xi_dat, xin)
+    p_dat = np.append(p_dat, p)
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
 
+    #print("vz=",vzn) 
     #Add the distance traveled in dt to r, increase t by dt
     zn += vzn * dt
     rn += vrn * dt
@@ -150,13 +155,15 @@ def GetTrajectory(r_0,xi_0):
     if rn < 0:
       rn = -rn
       pr = -pr
-    if rn > 6 or xin < 0 or xin > 9:
+    if rn > 6 or xin < 0 or xin > 10:
       esc = -1
       break
     if outOfBounds(rn, xin): 
       esc = 1
-    xiPos = xin
-  #print(esc)
+  xiPos = xin
+  global trajectories
+  data = [r_dat,xi_dat,vz_dat]
+  trajectories.append(data)  #print(esc)
   del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos
 
@@ -175,4 +182,55 @@ def find_nearest_index(array,value):
     if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx])):
         return idx-1
     else:
-        return idx
+      return idx
+  
+def plotVzTest(fname,t0):
+      
+  fig, axs = plt.subplots(2,sharex=True)
+
+  #Make color axis of electric field
+  colors = axs[0].pcolormesh(xi_sim,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
+  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  #cbar = fig.colorbar(colors,ax=axs[0],ticks=tick_locations, format=ticker.LogFormatterMathtext())
+  #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')    
+  axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
+  axs[0].set_ylabel('r ($c/\omega_p$)')
+  axs[1].set_ylabel('v_z ($c$)')
+  
+  for i in range(len(trajectories)):
+    track = trajectories[i]
+    r = track[0][:]
+    xi = track[1][:]
+    vz = track[2][:]
+    axs[0].plot(xi,r,'k',alpha=0.5,linewidth=1)
+    axs[1].plot(xi,vz,'k',alpha=0.5,linewidth=1)
+  axs[0].set_xlim(xi_sim[0], xi_sim[-1])
+  axs[0].set_ylim(0, r_sim[-1])
+  axs[0].set_title('Ionized Electron Trajectories, t = '+str(t0)+'$\omega_p^{-1}$')
+  fn = "plots/"+fname+"_vz.png"
+  plt.savefig(fn,dpi=300)
+  #plt.show()
+def plotTest(fname,t0):
+      
+  fig, axs = plt.subplots()
+
+  #Make color axis of electric field
+  colors = axs.pcolormesh(xi_sim,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
+  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  #cbar = fig.colorbar(colors,ax=axs[0],ticks=tick_locations, format=ticker.LogFormatterMathtext())
+  #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')    
+  axs.set_xlabel("$\\xi$ ($c/\omega_p$)")
+  axs.set_ylabel('r ($c/\omega_p$)')
+  
+  for i in range(len(trajectories)):
+    track = trajectories[i]
+    r = track[0][:]
+    xi = track[1][:]
+    p = track[2][:]
+    axs.plot(xi,r,'k',alpha=0.5,linewidth=1)
+  axs.set_xlim(xi_sim[0], xi_sim[-1])
+  axs.set_ylim(0, r_sim[-1])
+  axs.set_title('Ionized Electron Trajectories, t = '+str(t0)+'$\omega_p^{-1}$')
+  fn = "plots/"+fname+".png"
+  plt.savefig(fn,dpi=300)
+  #plt.show()

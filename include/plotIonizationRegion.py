@@ -12,19 +12,21 @@ from tempfile import TemporaryFile as tmp
 from scipy.special import gamma
 
 import getOsirisFields as osiris
+import getQuickPICFields as quickPIC
+
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
 EC = 1.60217662e-19               #electron charge in C
 EP_0 = 8.854187817e-12                #vacuum permittivity in C/(V m)
 C = 299892458                     #speed of light in vacuum in m/s
-N = 1e23                          #electron number density in 1/m^3
+N = 5e22                          #electron number density in 1/m^3
 WP = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
-Er = osiris.transE("EField_r.h5")
-Ez = osiris.longE("EField_z.h5")
+Er = quickPIC.transE("fields/exslicexz_00000100.h5")
+Ez = quickPIC.longE("fields/ezslicexz_00000100.h5")
 
-r,xi = osiris.axes("EField_r.h5",858.95)
+r,xi = quickPIC.axes("fields/ezslicexz_00000100.h5")
 
 #print((M_E * C * WP)/EC * 1e-9)  #Convert normalized field to GV/m
 
@@ -34,7 +36,6 @@ def W(E0):
   gsE = 24.5 # unperturbed ground state energy in eV
   Z = 1 # charge number after ionization
   n = 0.746 # effective principal quantum number
-  sigmaz = .47 # beam spread in z
   
   E = E0 * (M_E * C * WP)/EC * 1e-9  #Convert normalized field to GV/m
 
@@ -43,27 +44,28 @@ def W(E0):
   W = W0/((E)**(2*n-1)) * math.exp(-6.83*gsE**(3/2)/E)
   return W 
 
-def ionRatio(i,j):
+def ionRatio(i,n):
+        #dt = 14.7/2
   integral = 0
-  for n in range(len(xi)-1,j,-1):
-    En = math.sqrt((Er[i,n])**2 + (Ez[i,n])**2)
-    integral = integral + W(En) * (xi[n] - xi[n-1]) / WP
-  ratio = 1 - math.exp(-1*integral)
+  #for n in range(1,j):
+  En = math.sqrt((Er[i,n])**2 + (Ez[i,n])**2)
+  #integral = integral +  W(En) * (xi[n] - xi[n-1])/WP
+  ratio = W(En) * 14.7 /WP #(xi[n] - xi[n-1])/WP #1 - math.exp(-1*integral)
   if ratio > 1.0:
     return 1.0
   return ratio
 
 
 def plotIonizationRegion():
-  dat = np.load('data.npz')
-  xi = dat['xi']
-  escaped = dat['esc']
-  trail = []#dat['beam']
-  drive = []
+        #dat = np.load('data.npz')
+  #xi = dat['xi']
+  #escaped = dat['esc']
+  #trail = []#dat['beam']
+  #drive = []
   eRatio  = np.zeros((len(r),len(xi)))
-  n = 0
-  for i in range(len(r)):
-    for j in range(int(len(xi)/2.0), len(xi)):
+  #n = 0
+  for j in range(len(xi)):
+    for i in range(int(len(r)/2.0), len(r)):
             #if escaped[i,j] == 1:
 #        ri = r[i]
 #        xii = xi[j]
@@ -98,8 +100,8 @@ def plotIonizationRegion():
   ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
   
   #plt.xlim(xi[0], xi[-1])
-  plt.xlim(5,9)
-  plt.ylim(0,4)
+  #plt.xlim(5,9)
+  plt.ylim(0,r[-1])
   fn = "ionizationRegion.png"
   plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
