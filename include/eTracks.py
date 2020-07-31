@@ -182,7 +182,7 @@ def GetTrajectory(r_0,xi_0):
 
 def GetTrajectory_NoB(r_0,xi_0):
   #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat, vz_dat,p_dat = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
+  r_dat, z_dat, t_dat, xi_dat, vz_dat,pz_dat = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
   p = 0
   rn = r_0 # position in c/w_p
   pr = 0 # momentum in m_e c
@@ -220,7 +220,7 @@ def GetTrajectory_NoB(r_0,xi_0):
     z_dat = np.append(z_dat, zn)
     vz_dat = np.append(vz_dat, vzn)
     xi_dat = np.append(xi_dat, xin)
-    p_dat = np.append(p_dat, pr)
+    pz_dat = np.append(pz_dat, pz)
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
@@ -244,7 +244,7 @@ def GetTrajectory_NoB(r_0,xi_0):
       esc = 1
   xiPos = xin
   global trajectories
-  data = [r_dat,xi_dat,vz_dat]
+  data = [r_dat,xi_dat,pz_dat]
   trajectories.append(data)  #print(esc)
   del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos
@@ -277,7 +277,7 @@ def plotVzTest(fname,t0):
   #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')    
   axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
   axs[0].set_ylabel('r ($c/\omega_p$)')
-  axs[1].set_ylabel('v_z ($c$)')
+  axs[1].set_ylabel('$p_z$ ($c$)')
   
   for i in range(len(trajectories)):
     track = trajectories[i]
@@ -289,7 +289,7 @@ def plotVzTest(fname,t0):
   axs[0].set_xlim(xi_sim[0], xi_sim[-1])
   axs[0].set_ylim(0, r_sim[-1])
   axs[0].set_title('Ionized Electron Trajectories, t = '+str(t0)+'$\omega_p^{-1}$')
-  fn = "plots/"+fname+"_vz.png"
+  fn = "plots/"+fname+"_pz.png"
   plt.savefig(fn,dpi=300)
   #plt.show()
 def plotNoBTest(fname,t0):

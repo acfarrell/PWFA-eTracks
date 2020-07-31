@@ -11,8 +11,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tempfile import TemporaryFile as tmp
 from scipy.special import gamma
 
-import getOsirisFields as osiris
-import getQuickPICFields as quickPIC
+import include.getOsirisFields as osiris
+import include.getQuickPICFields as quickPIC
 
 
 #Definition of Constants
@@ -23,10 +23,12 @@ C = 299892458                     #speed of light in vacuum in m/s
 N = 5e22                          #electron number density in 1/m^3
 WP = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
-Er = quickPIC.transE("quickPIC/exslicexz_00000100.h5")
-Ez = quickPIC.longE("quickPIC/ezslicexz_00000100.h5")
+#Er = quickPIC.transE("quickPIC/exslicexz_00000100.h5")
+#Ez = quickPIC.longE("quickPIC/ezslicexz_00000100.h5")
 
-r,xi = quickPIC.axes("quickPIC/ezslicexz_00000100.h5")
+r,xi, Er = quickPIC.spliceLowRes("quickPIC/exslicexz_00000100.h5")
+r,xi, Ez = quickPIC.spliceLowRes("quickPIC/ezslicexz_00000100.h5")
+
 
 #print((M_E * C * WP)/EC * 1e-9)  #Convert normalized field to GV/m
 
@@ -42,8 +44,10 @@ def W(E0):
   E = E0 * (M_E * C * WP)/EC * 1e-9  #Convert normalized field to GV/m
 
   W0 = 1.52e15 * 4**n * gsE / (n * gamma(2*n)) * (20.5*gsE**(3/2))**(2*n-1)
-  
-  W = W0/((E)**(2*n-1)) * math.exp(-6.83*(gsE**(3/2))/E)
+  try:
+    W = W0/((E)**(2*n-1)) * math.exp(-6.83*(gsE**(3/2))/E)
+  except:
+    return 0.0
   #print(W)
   return W 
 
@@ -54,64 +58,136 @@ def ionRatio(i,j):
     En = math.sqrt((Er[i,n])**2 + (Ez[i,n])**2)
     integral = integral +  W(En) * (xi[n] - xi[n-1])/WP
   ratio = 1 - math.exp(-1*integral)#
-  #ratio = W(En) * 14.7 /WP  #1 - math.exp(-1*integral)
   #print(ratio)
   if ratio > 1.0:
     return 1.0
   return ratio
 
+def saveIonizationRegion(r0,xi0,Er0,Ez0):
+  print("Saving Ionization Region Data File")
+  global r, xi, Er, Ez
+  r = r0
+  xi = xi0
+  Er = Er0
+  Ez = Ez0
+  max_r = 0
+  max_ratio = 0
+  max_E = 0
+  eRatio  = np.zeros((len(r),len(xi)))
+  for i in range(int(len(r)/2.0), int(3*len(r)/4)):
+    integral = 0
+    for j in range(len(xi)-1,0,-1):
+      En = math.sqrt((Er[i,j])**2 + (Ez[i,j])**2)
+      integral = integral +  W(En) * (xi[j] - xi[j-1])/WP
+      ratio = 1 - math.exp(-1*integral)#
+  #print(ratio)
+      #if ratio > 1.0:
+        #ratio = 1.0
+      #print('Row ',i, "/",len(r),", Column ", j,"/",len(xi), end="\r", flush=True)
+      if ratio > .1:
+        if r[i] > max_r:
+          max_r = r[i]
+        if ratio > max_ratio and xi[j] > 1:
+          max_ratio = ratio
+        if En > max_E and xi[j] > 1:
+          max_E = En
+        eRatio[i,j] = ratio
+  np.savez('ionizationRegion.npz', eRatio=eRatio, max_E=max_E,max_r=max_r, max_ratio=max_ratio)
+  print("Ionization Data Saved")
+  return
+#saveIonizationRegion(r,xi,Er,Ez)
+
+def clipIonizationRatio():
+  global eRatio
+  for i in range(len(eRatio)):
+    for j in range(len(eRatio[0])):
+      if eRatio[i,j] >1.0:
+        eRatio[i,j] = 1.0
+  return
+
+def calculateTimeStep():
+  global dt, eRatio
+  dat = np.load('ionizationRegion.npz')
+  max_ratio = dat['max_ratio']
+  eRatio = dat['eRatio']
+  max_E = dat['max_E']
+  try:
+    dt = max_ratio * WP / W(max_E)
+  except:
+    dt = 0
+  #print("Maximum Radius of Ionization Region = ", max_r)
+  #timeStep=.075
+  print("Time Step = ",dt)
+  return #dt, eRatio
+
+def init(r,xi,Er,Ez):
+  saveIonizationRegion(r,xi,Er,Ez)
+  calculateTimeStep()
+  clipIonizationRatio()
+
+#dt, eRatio = calculateTimeStep()
+#dt = (xi[1] - xi[0]) 
+#print(dt)#0.1
+def Wdt(i,j):
+  global dt
+  En = math.sqrt((Er[i,j])**2 + (Ez[i,j])**2)
+  ratio = W(En) * dt /WP  #1 - math.exp(-1*integral)
+  #print(W(En)/WP)
+  if ratio > 1.0:
+    return 1.0
+  return ratio
 
 def plotIonizationRegion():
-        #dat = np.load('data.npz')
-  #xi = dat['xi']
-  #escaped = dat['esc']
-  #trail = []#dat['beam']
-  #drive = []
-  eRatio  = np.zeros((len(r),len(xi)))
-  #n = 0
+  global eRatio, maxRpos, maxZpos
+  max_r = 0
+  WDT  = np.zeros((len(r),len(xi)))
   for j in range(len(xi)):
     for i in range(int(len(r)/2.0), int(3*len(r)/4)):
-            #if escaped[i,j] == 1:
-#        ri = r[i]
-#        xii = xi[j]
-#        xif = dat['beam'][j]
-#        drive.append(xi[j])
-#        trail.append(dat['beam'][j])
-#        n += 1
       print('Row ',i, "/",len(r),", Column ", j,"/",len(xi), end="\r", flush=True)
-      #if Er[i,j] < -0.5:
-      ratio =  ionRatio(i,j)
+      ratio =  Wdt(i,j)
       if ratio > .1:
+        if r[i] > max_r:
+          max_r = r[i]
         #print(ratio)
-        eRatio[i][j] = ratio
-  
-  fig, ax  = plt.subplots(figsize=(9,6))
+        WDT[i][j] = ratio
+  print("Maximum Radius of Ionization Region = ", max_r)
+
+  fig, axs  = plt.subplots(2,figsize=(9,6),sharex=True)
   E = Er 
   eRatio = np.ma.masked_where(eRatio == 0, eRatio)
+  WDT = np.ma.masked_where(WDT == 0, WDT)
   cmap = plt.cm.OrRd
   cmap.set_bad(color = (1,1,1,0))
-
-  colors = ax.pcolormesh(xi ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
   
-  colors2 = ax.pcolormesh(xi ,r,eRatio, cmap=cmap)
-  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
-  cbar = fig.colorbar(colors,ax=ax,ticks=tick_locations, format=ticker.LogFormatterMathtext())
-  cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
-  cbar2 = fig.colorbar(colors2,ax=ax)
-  cbar2.set_label('$N_e/N_0$, Fraction of Ionized Atoms')
 
-  ax.set_ylabel('r ($c/\omega_p$)')
-  ax.set_title('Ionization Region')
-  ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
+  for ax in axs:
+    colors = ax.pcolormesh(xi ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+  
+  colors2 = axs[0].pcolormesh(xi ,r,eRatio, cmap=cmap)
+  colors3 = axs[1].pcolormesh(xi ,r,WDT, cmap=cmap)
+  #tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  #cbar = fig.colorbar(colors,ax=axs[0],ticks=tick_locations, format=ticker.LogFormatterMathtext())
+  #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
+  cbar2 = fig.colorbar(colors2,ax=axs[0])
+  cbar2.set_label('$N_e/N_0$, Integrated Fraction of Ionized Atoms')
+  cbar3 = fig.colorbar(colors3,ax=axs[1])
+  cbar3.set_label('$W\Delta t$, Fraction of Ionized Atoms')
+
+  axs[0].set_ylabel('r ($c/\omega_p$)')
+  axs[0].set_title('Ionization Region')
+  axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
   
   #plt.xlim(xi[0], xi[-1])
   #plt.xlim(5,9)
-  plt.ylim(0,r[-1])
+  axs[0].set_ylim(0,r[-1])
+  axs[1].set_ylim(0,r[-1])
+  #axs[0].set_xlim(3.75,4.75)#r[-1])
+  #axs[1].set_xlim(3.75,4.75)#r[-1])
   fn = "ionizationRegion.png"
   plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
   return
-plotIonizationRegion()
+#plotIonizationRegion()
 def plotIonizationAtRadius():
         #dat = np.load('data.npz')
   #xi = dat['xi']
@@ -147,7 +223,7 @@ def plotIonizationAtRadius():
   #colors = ax.pcolormesh(xi ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
   
   #colors2 = ax.pcolormesh(xi ,r,eRatio, cmap=cmap)
-  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  #tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
   #cbar = fig.colorbar(colors,ax=ax,ticks=tick_locations, format=ticker.LogFormatterMathtext())
   #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
   #cbar2 = fig.colorbar(colors2,ax=ax)
@@ -159,9 +235,9 @@ def plotIonizationAtRadius():
   
   #plt.xlim(xi[0], xi[-1])
   #plt.xlim(5,9)
-  plt.xlim(0,2)#r[-1])
+  plt.xlim(0,.25)#r[-1])
   fn = "ionizationRatiosvRadius.png"
   plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
   return
-plotIonizationAtRadius()
+#plotIonizationAtRadius()

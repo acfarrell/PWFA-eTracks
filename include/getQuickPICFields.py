@@ -38,11 +38,41 @@ def longE(fname):
 def phiB(fname):
   return np.flip(getField(fname),1)
 
+def spliceLowRes(fname):
+  r, xi = axes(fname)
+  field = getField(fname)
+  #print("r-axis has ", len(r)," bins")
+  #print("xi-axis has ", len(xi)," bins")
+
+  lowRes_fname = fname[:8] + '_lowRes' + fname[8:]
+  lowRes_r, lowRes_xi = axes(lowRes_fname)
+  lowRes_field = getField(lowRes_fname)
+  #print("Low res r-axis has ", len(lowRes_r)," bins")
+  #print("Low res xi-axis has ", len(lowRes_xi)," bins")
+  
+  xi_IDX = (np.abs(lowRes_xi - 9)).argmin()
+  for j in range(xi_IDX, len(lowRes_xi)):
+    xi = np.append(xi, lowRes_xi[j])
+    xi_slice = field.sum(1)[...,None]
+    xi_slice.shape
+    for i in range(len(field)):
+      lowRes_IDX = int(i//4)
+      xi_slice[i] = lowRes_field[lowRes_IDX,j]
+    #print(len(field)," rows, " ,len(xi_slice))
+    field = np.append(field, xi_slice,1)
+    field.shape
+  #print(field[:][512:])
+
+  #xi = np.append(xi, lowRes_xi[xi_IDX:])
+  #field = np.append(field, lowRes_field[:,xi_IDX:])
+  
+  return r, xi, np.flip(field,1)
+
 def plotFields():
-  r, xi = axes("fields/exslicexz_00000100.h5")
-  Er = transE("fields/exslicexz_00000100.h5")
-  Ez = longE("fields/ezslicexz_00000100.h5")
-  Bphi = phiB("fields/byslicexz_00000100.h5")
+#r, xi = axes("fields/exslicexz_00000100.h5")
+  r,xi,Er = spliceLowRes("quickPIC/exslicexz_00000100.h5")
+  r,xi,Ez = spliceLowRes("quickPIC/ezslicexz_00000100.h5")
+  r,xi,Bphi = spliceLowRes("quickPIC/byslicexz_00000100.h5")
 
 
   fig, ax = plt.subplots(3,sharex=True,figsize=(10, 15))

@@ -16,12 +16,14 @@ def getBounds(Er,r,xi,t0):
   bounds = np.zeros((len(Er), len(Er[0])),dtype=int)
   for j in range(len(Er[0]) - 1):
     col = Er[:,j]
-    
+    #print(col) 
     maxE = np.amax(col)
-    maxE_dex = np.where(col == maxE)[0]
-    if maxE < 0.1 or r[maxE_dex] < 1.0:
+    #print(maxE)
+    maxE_dex = (np.where(col == maxE))[0]
+    #print(maxE_dex[0])
+    if maxE < 0.1 or r[maxE_dex[0]] < 1.0:
       continue
-    i = maxE_dex
+    i = maxE_dex[0]
     while i < len(col) - 1:
       bounds[i,j] = 1
       i+= 1

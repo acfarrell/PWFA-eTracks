@@ -10,6 +10,7 @@ from scipy.special import gamma
 import include.eTracks as eTracks 
 import include.getOsirisFields as osiris
 import include.getQuickPICFields as quickPIC
+import include.plotIonizationRegion as ionization
 
 
 # Initialize simulation information from user input as global variables
@@ -47,39 +48,18 @@ C = 299892458                     #speed of light in vacuum in m/s
 NP = 1e23                          #electron number density in 1/m^3
 WP = np.sqrt(NP*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
-Er = quickPIC.transE(Er_fname)
-Ez = quickPIC.longE(Ez_fname)
-Bphi = quickPIC.longE(Bphi_fname)
+#Er = quickPIC.transE(Er_fname)
+#Ez = quickPIC.longE(Ez_fname)
+#Bphi = quickPIC.longE(Bphi_fname)
 
-r,xi = quickPIC.axes(Er_fname)
-
-def W(E0):
-  # Takes an electric field in normalized units and returns the ionization rate in s^-1
-  # Define constants for calculating ionization rate for He
-  gsE = 24.5 # unperturbed ground state energy in eV
-  Z = 1 # charge number after ionization
-  n = 0.746 # effective principal quantum number
-  
-  E = E0 * (M_E * C * WP)/EC * 1e-9  #Convert normalized field to GV/m
-
-  W0 = 1.52e15 * 4**n * gsE / (n * gamma(2*n)) * (20.5*gsE**(3/2))**(2*n-1)
-  
-  W = W0/((E)**(2*n-1)) * math.exp(-6.83*gsE**(3/2)/E)
-  return W 
-
-def ionRatio(i,j):
-  dt = 14.7/WP
-  #integral = 0
-  #for n in range(1,j):
-  En = math.sqrt((Er[i,j])**2 + (Ez[i,j])**2)
-  #  integral = integral +  W(En) * (xi[n] - xi[n-1])/WP
-  ratio = W(En) * dt#1 - math.exp(-1*integral)
-  if ratio > 1.0:
-    return 1.0
-  return ratio
+r,xi, Er = quickPIC.spliceLowRes(Er_fname)
+r,xi, Ez = quickPIC.spliceLowRes(Ez_fname)
+r,xi, Bphi = quickPIC.spliceLowRes(Bphi_fname)
 
 
 def main():
+  ionization.init(r,xi,Er,Ez)
+  #ionization.plotIonizationRegion()
   eTracks.InitFields(Er,Ez,Bphi,r,xi,t0)
   nrows = len(r)
   ncols = len(xi)
@@ -92,10 +72,11 @@ def main():
   num = 0
   ionizedCount = 0
 
-  eTot = 50#int(injCharge / EC) #number of electrons to inject print("Simulating ",eTot," injected electrons.")
-  for j in range(len(xi)):
-    for i in range(int(len(r)/2)):
-      ratio = ionRatio(i,j)
+  eTot = 25#int(injCharge / EC) #number of electrons to inject 
+  print("Simulating ",eTot," injected electrons.")
+  for j in range(int(ncols/4),ncols -1):
+    for i in range(int(nrows/2),nrows -1):
+      ratio = ionization.Wdt(i,j)
       if ratio > 0.1:
         ionizedCount += 1
     
@@ -105,18 +86,18 @@ def main():
     i = rand.randint(int(nrows/2),nrows-1)
     j = rand.randint(int(ncols/4),ncols-1)
     
-    ratio = ionRatio(i,j) 
-    if ratio > 0.1:
-      prob = rand.uniform(0,1)
-      if prob < ratio:
-        eCount += 1
-        if eCount > eTot:
-          break
-        escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],xi[j])
-        if escaped[i,j] == 1 or escaped[i,j] == 2 :
-          trailBeamProf.append(xiPos)
-          driveBeamProf.append(xi[j])
-        print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
+    ratio = ionization.Wdt(i,j) 
+    #if ratio > 0.1:
+    prob = rand.uniform(0,1)
+    if prob < ratio:
+      eCount += 1
+      if eCount > eTot:
+        break
+      escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],xi[j])
+      if escaped[i,j] == 1 or escaped[i,j] == 2 :
+        trailBeamProf.append(xiPos)
+        driveBeamProf.append(xi[j])
+      print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
   np.savez(output_fname, r=r,xi=xi, esc=escaped, drive=driveBeamProf,trail=trailBeamProf)
   eTracks.plotTest(output_fname,t0)
   eTracks.plotVzTest(output_fname,t0)
