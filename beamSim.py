@@ -18,7 +18,7 @@ if len(sys.argv) == 2:
   input_fname = str(sys.argv[1])
 else:
   input_fname = "input.example"
-print("Using initial conditions from ",input_fname)
+#print("Using initial conditions from ",input_fname)
 init = importlib.import_module(input_fname)
 
 #Output File Name
@@ -58,7 +58,7 @@ r,xi, Bphi = quickPIC.spliceLowRes(Bphi_fname)
 
 
 def main():
-  ionization.init(r,xi,Er,Ez)
+  pinchXi = ionization.init(r,xi,Er,Ez,t0,output_fname)
   #ionization.plotIonizationRegion()
   eTracks.InitFields(Er,Ez,Bphi,r,xi,t0)
   nrows = len(r)
@@ -71,9 +71,10 @@ def main():
   eCount = 0
   num = 0
   ionizedCount = 0
-
-  eTot = 25#int(injCharge / EC) #number of electrons to inject 
-  print("Simulating ",eTot," injected electrons.")
+  capturedCount = 0
+  print("Simulating t = ", t0)
+  eTot = 16#int(injCharge / EC) #number of electrons to inject 
+  #print("Simulating ",eTot," injected electrons.")
   for j in range(int(ncols/4),ncols -1):
     for i in range(int(nrows/2),nrows -1):
       ratio = ionization.Wdt(i,j)
@@ -83,24 +84,27 @@ def main():
   while eCount < eTot: 
     if ionizedCount ==0:
       break
-    i = rand.randint(int(nrows/2),nrows-1)
-    j = rand.randint(int(ncols/4),ncols-1)
-    
-    ratio = ionization.Wdt(i,j) 
+    #i = rand.randint(int(nrows/2),nrows-1)
+    #j = rand.randint(int(ncols/4),ncols-1)
+    r0 = 0.1 + (0.3 / eTot) * eCount
+    #ratio = ionization.Wdt(i,j) 
     #if ratio > 0.1:
-    prob = rand.uniform(0,1)
-    if prob < ratio:
+    #prob = rand.uniform(0,1)
+    if True:#prob < ratio:
       eCount += 1
       if eCount > eTot:
         break
-      escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],xi[j])
+      escaped[i,j], xiPos = eTracks.GetTrajectory(r0,pinchXi)#r[i],xi[j])
       if escaped[i,j] == 1 or escaped[i,j] == 2 :
+        capturedCount += 1
         trailBeamProf.append(xiPos)
         driveBeamProf.append(xi[j])
-      print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
-  np.savez(output_fname, r=r,xi=xi, esc=escaped, drive=driveBeamProf,trail=trailBeamProf)
-  eTracks.plotTest(output_fname,t0)
-  eTracks.plotVzTest(output_fname,t0)
+      #print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
+  #np.savez(output_fname, r=r,xi=xi, esc=escaped, drive=driveBeamProf,trail=trailBeamProf)
+  percentCaptured = 100 * capturedCount / eCount
+  eTracks.plotTest(output_fname,t0,percentCaptured)
+  #eTracks.plotFieldTest(output_fname,t0,percentCaptured)
+  #eTracks.plotVzTest(output_fname,t0)
   #plot()
   print("\n Finished ")
 

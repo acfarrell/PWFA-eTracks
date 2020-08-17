@@ -9,10 +9,21 @@ import matplotlib.ticker as ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tempfile import TemporaryFile as tmp
 
-import getQuickPICFields as osiris
+import getQuickPICFields as quickPIC
+import getOsirisFields as osiris
 
-Er = osiris.transE('fields/exslicexz_00000100.h5')
-r,xi = osiris.axes('fields/exslicexz_00000100.h5')
+#Definition of Constants
+M_E = 9.109e-31                   #electron rest mass in kg
+EC = 1.60217662e-19               #electron charge in C
+EP_0 = 8.854187817e-12                #vacuum permittivity in C/(V m)
+C = 299892458                     #speed of light in vacuum in m/s
+N = 5e22                          #electron number density in 1/m^3
+WP = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
+
+r,xi, Er = quickPIC.spliceLowRes("quickPIC/exslicexz_00000139.h5")
+r,xi, Ez = quickPIC.spliceLowRes("quickPIC/ezslicexz_00000139.h5")
+#Er = osiris.transE('fields/exslicexz_00000100.h5')
+#r,xi = osiris.axes('fields/exslicexz_00000100.h5')
 
 def plot():
   dat = np.load('data.npz')
@@ -45,24 +56,22 @@ def plot():
 
 
 def plotBeams():
-  dat = np.load('quickPIC_100.npz')
+  dat = np.load('quickPIC/quickPIC_139.npz')
   #xi = dat['xi']
   escaped = dat['esc']
   trail = dat['trail']
   drive = dat['drive']
   n = 0
-  #for i in range(len(r)):
-          #for j in range(len(xi)):
-            #if escaped[i,j] == 1:
-              #drive.append(xi[j])
-        #trail.append(dat['beam'][j])
-        #n += 1
-  #print("Captured Electron Ionization positions = ", n)
   print("Captured Electrons = ", len(trail))
-  plt.style.use('seaborn-poster')
   fig, axs  = plt.subplots(2,sharex=True)
   E = Er 
+  
+  xiWidth = (xi[1] - xi[0]) / WP
+  spread = (max(trail) - min(trail))
+  spread_SI = spread / WP
 
+  print("Spread of trailing beam = ",round(spread,3),"c/wp, ",spread_SI," seconds")
+  print("Bin width in xi = ", xiWidth)
   #define binary color map
   ternary_cmaplist = [(1.0,0.,0.,1.0),(0.,0.,0.,0.0),(1.0,1.0,0.0,1.0),(0.0,1.0,0.0,1.0)]
   ternary_cmap = mpl.colors.LinearSegmentedColormap.from_list('Custom cmap', ternary_cmaplist, 4)
@@ -78,21 +87,25 @@ def plotBeams():
   axs[0].set_ylabel('r ($c/\omega_p$)')
   axs[0].set_title('Captured Electron Beam Test')
   axs[0].set_xlabel("$\\xi$ ($c/\omega_p$)")
+  axs[0].set_ylim(0,3)
+  #axs[0].set_xlim(0,8)
+  #axs[1].set_xlim(0,8)
+  plt.xlim(0,8)
   
-  binwidth = (max(drive) - min(drive))/10.0
-  nbins = int( (max(trail) - min(trail))/binwidth)
-  axs[1].hist(drive, bins = 10,color='red',label="Driving Beam")
+  binwidth = (max(drive) - min(drive))/15.0
+  nbins = int(round( (max(trail) - min(trail))/binwidth))
+  axs[1].hist(drive, bins = 15,color='red',label="Driving Beam")
   axs[1].hist(trail, bins = nbins,color='blue',label="Trailing Beam")
   counts, bin_edges = np.histogram(trail,bins=nbins)
   axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
   axs[1].legend()
   axs[1].set_ylim(None, counts.max()+20 )
-  plt.xlim(xi[0], xi[-1])
-  fn = "capturedIonizedBeam.png"
+  #plt.xlim(xi[0], xi[-1])
+  fn = "capturedIonizedBeam_quickPIC_139.png"
   plt.savefig(fn,dpi=300,transparent=True)
   plt.show()
   return
-
+plotBeams()
 
 def plotBeamOverlaps():
   #Plot a closer look at the beam profiles with a square driving beam
@@ -341,7 +354,7 @@ def plotCorrespondence():
   plt.show()
   return
 #plot()
-plotBeams()
+#plotBeams()
 #plotBeamOverlapsLowR()
 #plotCorrespondence()
 #plotBeamError()

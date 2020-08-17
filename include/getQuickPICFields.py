@@ -69,10 +69,10 @@ def spliceLowRes(fname):
   return r, xi, np.flip(field,1)
 
 def plotFields():
-#r, xi = axes("fields/exslicexz_00000100.h5")
-  r,xi,Er = spliceLowRes("quickPIC/exslicexz_00000100.h5")
-  r,xi,Ez = spliceLowRes("quickPIC/ezslicexz_00000100.h5")
-  r,xi,Bphi = spliceLowRes("quickPIC/byslicexz_00000100.h5")
+#r, xi = axes("fields/exslicexz_00000139.h5")
+  r,xi,Er = spliceLowRes("quickPIC/exslicexz_00000139.h5")
+  r,xi,Ez = spliceLowRes("quickPIC/ezslicexz_00000139.h5")
+  r,xi,Bphi = spliceLowRes("quickPIC/byslicexz_00000139.h5")
 
 
   fig, ax = plt.subplots(3,sharex=True,figsize=(10, 15))

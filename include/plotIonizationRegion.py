@@ -11,7 +11,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tempfile import TemporaryFile as tmp
 from scipy.special import gamma
 
-import include.getOsirisFields as osiris
+#import getOsirisFields as osiris
 import include.getQuickPICFields as quickPIC
 
 
@@ -25,12 +25,13 @@ WP = np.sqrt(N*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 
 #Er = quickPIC.transE("quickPIC/exslicexz_00000100.h5")
 #Ez = quickPIC.longE("quickPIC/ezslicexz_00000100.h5")
+#print(xi[1] - xi[0] C/WP)
+r,xi, Er = quickPIC.spliceLowRes("quickPIC/exslicexz_00000117.h5")
+r,xi, Ez = quickPIC.spliceLowRes("quickPIC/ezslicexz_00000117.h5")
 
-r,xi, Er = quickPIC.spliceLowRes("quickPIC/exslicexz_00000100.h5")
-r,xi, Ez = quickPIC.spliceLowRes("quickPIC/ezslicexz_00000100.h5")
 
-
-#print((M_E * C * WP)/EC * 1e-9)  #Convert normalized field to GV/m
+print("Pixel width = ",(xi[1] - xi[0])/WP," seconds")
+#print((M_E * C * i
 
 def W(E0):
   if E0 == 0.0:
@@ -64,8 +65,8 @@ def ionRatio(i,j):
   return ratio
 
 def saveIonizationRegion(r0,xi0,Er0,Ez0):
-  print("Saving Ionization Region Data File")
-  global r, xi, Er, Ez
+        #print("Saving Ionization Region Data File")
+  global r, xi, Er, Ez, maxRatio
   r = r0
   xi = xi0
   Er = Er0
@@ -84,7 +85,7 @@ def saveIonizationRegion(r0,xi0,Er0,Ez0):
       #if ratio > 1.0:
         #ratio = 1.0
       #print('Row ',i, "/",len(r),", Column ", j,"/",len(xi), end="\r", flush=True)
-      if ratio > .1:
+      if ratio > .01:
         if r[i] > max_r:
           max_r = r[i]
         if ratio > max_ratio and xi[j] > 1:
@@ -93,9 +94,8 @@ def saveIonizationRegion(r0,xi0,Er0,Ez0):
           max_E = En
         eRatio[i,j] = ratio
   np.savez('ionizationRegion.npz', eRatio=eRatio, max_E=max_E,max_r=max_r, max_ratio=max_ratio)
-  print("Ionization Data Saved")
+  #print("Ionization Data Saved")
   return
-#saveIonizationRegion(r,xi,Er,Ez)
 
 def clipIonizationRatio():
   global eRatio
@@ -117,13 +117,16 @@ def calculateTimeStep():
     dt = 0
   #print("Maximum Radius of Ionization Region = ", max_r)
   #timeStep=.075
+  print("Maximum Ionization Fraction = ", max_ratio)
   print("Time Step = ",dt)
   return #dt, eRatio
 
-def init(r,xi,Er,Ez):
+def init(r,xi,Er,Ez,t0,fname):
   saveIonizationRegion(r,xi,Er,Ez)
   calculateTimeStep()
   clipIonizationRatio()
+  maxXi = plotIonizationRegion(fname,t0)
+  return maxXi
 
 #dt, eRatio = calculateTimeStep()
 #dt = (xi[1] - xi[0]) 
@@ -137,22 +140,27 @@ def Wdt(i,j):
     return 1.0
   return ratio
 
-def plotIonizationRegion():
+#init(r,xi,Er,Ez)
+def plotIonizationRegion(fname,t0):
   global eRatio, maxRpos, maxZpos
   max_r = 0
+  maxRatio= 0
+  maxXi = 0
   WDT  = np.zeros((len(r),len(xi)))
   for j in range(len(xi)):
     for i in range(int(len(r)/2.0), int(3*len(r)/4)):
-      print('Row ',i, "/",len(r),", Column ", j,"/",len(xi), end="\r", flush=True)
+            #print('Row ',i, "/",len(r),", Column ", j,"/",len(xi), end="\r", flush=True)
       ratio =  Wdt(i,j)
-      if ratio > .1:
+      if ratio > maxRatio and xi[j] > 3:
+        maxRatio = ratio
+        maxXi = xi[j]
+      if ratio > .01:
         if r[i] > max_r:
           max_r = r[i]
         #print(ratio)
         WDT[i][j] = ratio
-  print("Maximum Radius of Ionization Region = ", max_r)
 
-  fig, axs  = plt.subplots(2,figsize=(9,6),sharex=True)
+  fig, ax  = plt.subplots()#2,figsize=(9,6),sharex=True)
   E = Er 
   eRatio = np.ma.masked_where(eRatio == 0, eRatio)
   WDT = np.ma.masked_where(WDT == 0, WDT)
@@ -160,33 +168,33 @@ def plotIonizationRegion():
   cmap.set_bad(color = (1,1,1,0))
   
 
-  for ax in axs:
-    colors = ax.pcolormesh(xi ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
+  #for ax in axs:
+  colors = ax.pcolormesh(xi ,r,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-4,vmax=4),cmap="RdBu_r")
   
-  colors2 = axs[0].pcolormesh(xi ,r,eRatio, cmap=cmap)
-  colors3 = axs[1].pcolormesh(xi ,r,WDT, cmap=cmap)
+  #colors2 = ax.pcolormesh(xi ,r,eRatio, cmap=cmap)
+  colors3 = ax.pcolormesh(xi ,r,WDT,vmin=0.,vmax=1.0, cmap=cmap)
   #tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
   #cbar = fig.colorbar(colors,ax=axs[0],ticks=tick_locations, format=ticker.LogFormatterMathtext())
   #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')
-  cbar2 = fig.colorbar(colors2,ax=axs[0])
-  cbar2.set_label('$N_e/N_0$, Integrated Fraction of Ionized Atoms')
-  cbar3 = fig.colorbar(colors3,ax=axs[1])
+  #cbar2 = fig.colorbar(colors2,ax=axs[0])
+  #cbar2.set_label('$N_e/N_0$, Integrated Fraction of Ionized Atoms')
+  cbar3 = fig.colorbar(colors3,ax=ax)
   cbar3.set_label('$W\Delta t$, Fraction of Ionized Atoms')
 
-  axs[0].set_ylabel('r ($c/\omega_p$)')
-  axs[0].set_title('Ionization Region')
-  axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
-  
+  ax.set_ylabel('r ($c/\omega_p$)')
+  ax.set_title('Ionization Region, t='+str(round(t0,1))+"$\omega_p^{-1}$")
+  ax.set_xlabel("$\\xi$ ($c/\omega_p$)")
+  plt.text(1,4,"Maximum Ionization Fraction = "+str(round(maxRatio,3))+" at $\\xi = $"+str(round(maxXi,2))) 
   #plt.xlim(xi[0], xi[-1])
   #plt.xlim(5,9)
-  axs[0].set_ylim(0,r[-1])
-  axs[1].set_ylim(0,r[-1])
+  ax.set_ylim(0,r[-1])
+  #axs[1].set_ylim(0,r[-1])
   #axs[0].set_xlim(3.75,4.75)#r[-1])
   #axs[1].set_xlim(3.75,4.75)#r[-1])
-  fn = "ionizationRegion.png"
-  plt.savefig(fn,dpi=300,transparent=True)
-  plt.show()
-  return
+  fn = "plots/"+fname+"_ionizationRegion.png"
+  plt.savefig(fn,dpi=200)
+  #plt.show()
+  return maxXi
 #plotIonizationRegion()
 def plotIonizationAtRadius():
         #dat = np.load('data.npz')

@@ -12,11 +12,13 @@ import importlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import matplotlib.ticker as ticker
+import matplotlib.pylab as pl
 
 # include file imports
 from .getQuickPICFields import axes, longE, transE, phiB 
 from .getBounds import getBounds
 from .plotTracks import plot
+import include.plotPhaseSpace as phaseSpace
 
 trajectories = []
 
@@ -113,7 +115,7 @@ def outOfBounds(r,xi):
 
 def GetTrajectory(r_0,xi_0):
   #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat, vz_dat,p_dat = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
+  r_dat, z_dat, t_dat, xi_dat, vz_dat,pr_dat,Er_dat = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
   p = 0
   rn = r_0 # position in c/w_p
   pr = 0 # momentum in m_e c
@@ -151,7 +153,8 @@ def GetTrajectory(r_0,xi_0):
     z_dat = np.append(z_dat, zn)
     vz_dat = np.append(vz_dat, vzn)
     xi_dat = np.append(xi_dat, xin)
-    p_dat = np.append(p_dat, pr)
+    pr_dat = np.append(pr_dat, pr)
+    Er_dat = np.append(Er_dat,-1* EField(rn,xin,2))
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
@@ -175,77 +178,11 @@ def GetTrajectory(r_0,xi_0):
       esc = 1
   xiPos = xin
   global trajectories
-  data = [r_dat,xi_dat,vz_dat]
+  data = [r_dat,xi_dat,pr_dat,Er_dat]
   trajectories.append(data)  #print(esc)
-  del r_dat, xi_dat, z_dat, t_dat
-  return esc, xiPos
 
-def GetTrajectory_NoB(r_0,xi_0):
-  #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat, vz_dat,pz_dat = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
-  p = 0
-  rn = r_0 # position in c/w_p
-  pr = 0 # momentum in m_e c
-  vrn = pr/Gamma(p) # velocity in c
-  t = t0 # start time in 1/w_p
-  dt = .005 # time step in 1/w_p
-  
-  z0 = xi_0 + t0
-  zn = xi_0 + t0
-  pz = 0 
-  vzn = pz/Gamma(p) 
-  dvz = 0.0
-  dvr = 0.0
-
-  old_r = r_0 #- 1.0
-  turnRad = r_0
-  xin = xi_0
-  
-  esc = 2
-
-  #Iterate through position and time using a linear approximation 
-  #until the radial position begins decreasing
-  i = 0 #iteration counter
-  # Iterate while electron energy is under 100 MeV
-  while Gamma(p) < 100/.511:
-  
-    #Determine Momentum and velocity at this time and position
-    pz, pr, p = Momentum_NoB(rn, xin, dt, pr, pz)
-    vzn = Velocity(pz,p)  
-    vrn = Velocity(pr,p)
-
-    #Add former data points to the data lists
-    r_dat = np.append(r_dat, rn)
-    t_dat = np.append(t_dat, t)
-    z_dat = np.append(z_dat, zn)
-    vz_dat = np.append(vz_dat, vzn)
-    xi_dat = np.append(xi_dat, xin)
-    pz_dat = np.append(pz_dat, pz)
-    #print("z = ", zn)
-    if rn > turnRad:
-      turnRad = rn
-
-    #print("vz=",vzn) 
-    #Add the distance traveled in dt to r, increase t by dt
-    zn += vzn * dt
-    rn += vrn * dt
-    t += dt
-    xin = zn - t
-    i += 1
-    
-    # Allow for crossing the beam axis
-    if rn < 0:
-      rn = -rn
-      pr = -pr
-    if rn > 6 or xin < 0 or xin > 10:
-      esc = -1
-      break
-    if outOfBounds(rn, xin): 
-      esc = 1
-  xiPos = xin
-  global trajectories
-  data = [r_dat,xi_dat,pz_dat]
-  trajectories.append(data)  #print(esc)
+  trackName = "r0="+str(round(r_0,3))
+  phaseSpace.plot(r_dat,xi_dat,pr_dat, Er_sim,r_sim,xi_sim,trackName)
   del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos
 
@@ -321,10 +258,11 @@ def plotNoBTest(fname,t0):
   fn = "plots/"+fname+".png"
   plt.savefig(fn,dpi=300)
   #plt.show()
-def plotTest(fname,t0):
+def plotTest(fname,t0,percentCaptured):
       
   fig, axs = plt.subplots()
-
+  rainbow = pl.cm.jet(np.linspace(0,1,len(trajectories)))
+  
   #Make color axis of electric field
   colors = axs.pcolormesh(xi_sim,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
   tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
@@ -335,13 +273,44 @@ def plotTest(fname,t0):
   
   for i in range(len(trajectories)):
     track = trajectories[i]
+    initXi = track[1][0]
     r = track[0][:]
     xi = track[1][:]
     p = track[2][:]
-    axs.plot(xi,r,'k',alpha=0.5,linewidth=1)
-  axs.set_xlim(xi_sim[0], xi_sim[-1])
-  axs.set_ylim(0, r_sim[-1])
-  axs.set_title('Ionized Electron Trajectories, t = '+str(t0)+'$\omega_p^{-1}$')
-  fn = "plots/"+fname+".png"
+    axs.plot(xi,r,color=rainbow[-i-1])#,linewidth=1)
+  axs.set_xlim(initXi - 1.5, initXi)#xi_sim[0], xi_sim[-1])
+  axs.set_ylim(0, 1)#r_sim[-1])
+  fig.suptitle("Ionized Electron Trajectories")
+  axs.set_title('t = '+str(round(t0,2))+'$\omega_p^{-1}$, '+str(round(percentCaptured,2))+'% electrons captured')
+  fn = "plots/"+fname+"_rainbow.png"
+  plt.savefig(fn,dpi=300)
+  #plt.show()
+  phaseSpace.plotAll(trajectories)
+def plotFieldTest(fname,t0,percentCaptured):
+      
+  fig, axs = plt.subplots(1,2,sharey=True)
+  axs[0].set_ylabel("$E_r$ ($m_ec\omega_p/e$)")
+  axs[1].set_ylabel("$E_r$ ($m_ec\omega_p/e$)")
+  axs[0].set_xlabel('r ($c/\omega_p$)')
+  axs[1].set_xlabel('$\\xi$ ($c/\omega_p$)')
+  
+  for i in range(len(trajectories)):
+    track = trajectories[i]
+    r = track[0][:]
+    xi = track[1][:]
+    p = track[2][:]
+    E = track[3][:]
+    axs[0].plot(r,E,'k')#,alpha=0.25,linewidth=1)
+    axs[1].plot(xi,E,'k')#,alpha=0.25,linewidth=1)
+  axs[0].plot(r_sim,Er_sim[:,int(len(xi_sim)/4)], 'r--',label="Transverse Field within the Wake")
+  #axs[1].plot(xi_sim,Er_sim[:,int(len(xi_sim)/4)], 'r--',label="Transverse Field within the Wake")
+  axs[0].legend()
+  #axs[1].legend()
+  axs[0].set_xlim(0,2)
+  #axs.set_ylim()
+  fig.suptitle("Transverse Electric Field Experienced by Electrons")
+  #axs.set_title('t = '+str(round(t0,2))+'$\omega_p^{-1}$, '+str(round(percentCaptured,2))+'% electrons captured')
+  fn = "plots/"+fname+"_transverseFields.png"
+  fig.set_size_inches(12,8)
   plt.savefig(fn,dpi=300)
   #plt.show()
