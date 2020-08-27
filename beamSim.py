@@ -58,7 +58,7 @@ r,xi, Bphi = quickPIC.spliceLowRes(Bphi_fname)
 
 
 def main():
-  pinchXi = ionization.init(r,xi,Er,Ez,t0,output_fname)
+  pinchXi, pinchR = ionization.init(r,xi,Er,Ez,t0,output_fname)
   #ionization.plotIonizationRegion()
   eTracks.InitFields(Er,Ez,Bphi,r,xi,t0)
   nrows = len(r)
@@ -73,7 +73,7 @@ def main():
   ionizedCount = 0
   capturedCount = 0
   print("Simulating t = ", t0)
-  eTot = 16#int(injCharge / EC) #number of electrons to inject 
+  eTot = 1#int(injCharge / EC) #number of electrons to inject 
   #print("Simulating ",eTot," injected electrons.")
   for j in range(int(ncols/4),ncols -1):
     for i in range(int(nrows/2),nrows -1):
@@ -86,7 +86,7 @@ def main():
       break
     #i = rand.randint(int(nrows/2),nrows-1)
     #j = rand.randint(int(ncols/4),ncols-1)
-    r0 = 0.1 + (0.3 / eTot) * eCount
+    r0 = 0.1#0.01 + (pinchR / eTot) * (eCount+1)
     #ratio = ionization.Wdt(i,j) 
     #if ratio > 0.1:
     #prob = rand.uniform(0,1)
@@ -94,7 +94,8 @@ def main():
       eCount += 1
       if eCount > eTot:
         break
-      escaped[i,j], xiPos = eTracks.GetTrajectory(r0,pinchXi)#r[i],xi[j])
+      escaped[i,j], xiPos = eTracks.GetTrajectory(r0,pinchXi,True)#r[i],xi[j])
+  #    escaped[i,j], xiPos = eTracks.GetTrajectory(r0,pinchXi,False)#r[i],xi[j])
       if escaped[i,j] == 1 or escaped[i,j] == 2 :
         capturedCount += 1
         trailBeamProf.append(xiPos)
@@ -102,9 +103,9 @@ def main():
       #print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
   #np.savez(output_fname, r=r,xi=xi, esc=escaped, drive=driveBeamProf,trail=trailBeamProf)
   percentCaptured = 100 * capturedCount / eCount
-  eTracks.plotTest(output_fname,t0,percentCaptured)
+  eTracks.plotFTest(output_fname,t0)#,percentCaptured)
   #eTracks.plotFieldTest(output_fname,t0,percentCaptured)
-  #eTracks.plotVzTest(output_fname,t0)
+  #eTracks.plotNoBTest(output_fname,t0)
   #plot()
   print("\n Finished ")
 

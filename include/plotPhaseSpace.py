@@ -14,7 +14,7 @@ import include.plotSimTracks as plotSimTracks
 from scipy.signal import argrelextrema
 
 def plot(r, xi, pr, E, r_sim, xi_sim, trackName):
-  print("Plotting Phase Space and Trajectory")
+        #print("Plotting Phase Space and Trajectory")
   fig, axs = plt.subplots(2,1)
   #Make color axis of electric field
   colors = axs[0].pcolormesh(xi_sim ,r_sim,E,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-E.max(),vmax=E.max()),cmap="RdBu_r")
@@ -55,7 +55,7 @@ def plotPhaseSpace(r,pr, trackName):
 # plot of transverse phase space for initial kick from drive beam
   #find first maximum of transverse momentum
   idx = argrelextrema(pr,np.greater)[0][0]
-  print("Index of Kick = ",idx)
+  #print("Index of Kick = ",idx)
 
   ax.plot(pr[:idx],r[:idx],'k')
   ax.set_ylabel('r ($c/\omega_p$)')
@@ -127,12 +127,12 @@ def plotAll(data):
     idx = argrelextrema(pr,np.greater)[0][0]
     mindiff = 1
     for ix in range(len(xi)):
-      diff = abs(xi[0] - xi[ix] - 1.5)
+      diff = abs(xi[0] - xi[ix] - 0.2)
       if diff < mindiff:
         mindiff = diff
         idx15 = ix
     #idx15 = find_nearest_index(xi,3.5)
-    print(idx15)
+    #print(idx15)
     ax.plot(r[:idx15],pr[:idx15],color=colors[-i - 1])
     
   ax.set_xlabel('$r$ ($c/\omega_p$)')

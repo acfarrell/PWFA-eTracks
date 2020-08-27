@@ -125,8 +125,8 @@ def init(r,xi,Er,Ez,t0,fname):
   saveIonizationRegion(r,xi,Er,Ez)
   calculateTimeStep()
   clipIonizationRatio()
-  maxXi = plotIonizationRegion(fname,t0)
-  return maxXi
+  maxXi, maxR = plotIonizationRegion(fname,t0)
+  return maxXi, maxR
 
 #dt, eRatio = calculateTimeStep()
 #dt = (xi[1] - xi[0]) 
@@ -155,7 +155,7 @@ def plotIonizationRegion(fname,t0):
         maxRatio = ratio
         maxXi = xi[j]
       if ratio > .01:
-        if r[i] > max_r:
+        if r[i] > max_r and xi[j] > 3:
           max_r = r[i]
         #print(ratio)
         WDT[i][j] = ratio
@@ -194,7 +194,7 @@ def plotIonizationRegion(fname,t0):
   fn = "plots/"+fname+"_ionizationRegion.png"
   plt.savefig(fn,dpi=200)
   #plt.show()
-  return maxXi
+  return maxXi, max_r
 #plotIonizationRegion()
 def plotIonizationAtRadius():
         #dat = np.load('data.npz')

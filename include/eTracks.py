@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import matplotlib.ticker as ticker
 import matplotlib.pylab as pl
+from numpy import polyfit
 
 # include file imports
 from .getQuickPICFields import axes, longE, transE, phiB 
@@ -82,7 +83,7 @@ def Momentum(r, xi, dt, pr, pz):
   pr = pr + Fr * dt
   p = math.sqrt(pr**2 + pz**2)
   #print("pz = ",pz,", pr = ",pr)
-  return pz, pr, p
+  return pz, pr, p, Fr
 
 def Momentum_NoB(r, xi, dt, pr, pz):
   p = math.sqrt(pr**2 + pz**2)
@@ -96,7 +97,7 @@ def Momentum_NoB(r, xi, dt, pr, pz):
   pr = pr + Fr * dt
   p = math.sqrt(pr**2 + pz**2)
   #print("pz = ",pz,", pr = ",pr)
-  return pz, pr, p
+  return pz, pr, p, Fr
 def Velocity(pi,p):
   v = pi / Gamma(p)
   return v
@@ -113,15 +114,27 @@ def outOfBounds(r,xi):
     return True
   return False
 
-def GetTrajectory(r_0,xi_0):
+def FrAnalyticalModel(r,xi_0):
+  idx = find_nearest_index(xi_sim, xi_0)
+  sigma_r = sigmaR()
+  sigma_z = 1
+  Fr = (1 - math.exp(-1*r**2 / (2* sigma_r**2)))/(r * sigma_z)
+  return Fr
+
+def sigmaR():#z,dSigmaR):
+  # Analytical expression for transverse beam spread
+  # based on Jiayang's presentation from 20.06.12
+  return 0.07
+
+def GetTrajectory(r_0,xi_0, magBool):
   #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat, vz_dat,pr_dat,Er_dat = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
+  r_dat, z_dat, t_dat, xi_dat, vz_dat,pr_dat,F_dat, Fr_model = np.array([]), np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
   p = 0
   rn = r_0 # position in c/w_p
   pr = 0 # momentum in m_e c
   vrn = pr/Gamma(p) # velocity in c
   t = t0 # start time in 1/w_p
-  dt = .005 # time step in 1/w_p
+  dt = .01 # time step in 1/w_p
   
   z0 = xi_0 + t0
   zn = xi_0 + t0
@@ -143,10 +156,13 @@ def GetTrajectory(r_0,xi_0):
   while Gamma(p) < 100/.511:
   
     #Determine Momentum and velocity at this time and position
-    pz, pr, p = Momentum(rn, xin, dt, pr, pz)
+    if magBool:
+      pz, pr, p, F = Momentum(rn, xin, dt, pr, pz)
+    else:
+      pz, pr, p, F = Momentum_NoB(rn, xin, dt, pr, pz)
     vzn = Velocity(pz,p)  
     vrn = Velocity(pr,p)
-
+    Fr_model = np.append(Fr_model, FrAnalyticalModel(rn,xi_0))
     #Add former data points to the data lists
     r_dat = np.append(r_dat, rn)
     t_dat = np.append(t_dat, t)
@@ -154,7 +170,7 @@ def GetTrajectory(r_0,xi_0):
     vz_dat = np.append(vz_dat, vzn)
     xi_dat = np.append(xi_dat, xin)
     pr_dat = np.append(pr_dat, pr)
-    Er_dat = np.append(Er_dat,-1* EField(rn,xin,2))
+    F_dat = np.append(F_dat,F)
     #print("z = ", zn)
     if rn > turnRad:
       turnRad = rn
@@ -178,7 +194,7 @@ def GetTrajectory(r_0,xi_0):
       esc = 1
   xiPos = xin
   global trajectories
-  data = [r_dat,xi_dat,pr_dat,Er_dat]
+  data = [r_dat,xi_dat,pr_dat,F_dat, Fr_model]
   trajectories.append(data)  #print(esc)
 
   trackName = "r0="+str(round(r_0,3))
@@ -229,33 +245,66 @@ def plotVzTest(fname,t0):
   fn = "plots/"+fname+"_pz.png"
   plt.savefig(fn,dpi=300)
   #plt.show()
-def plotNoBTest(fname,t0):
+def plotForceTest(fname,t0):
       
   fig, axs = plt.subplots()
 
   #Make color axis of electric field
-  #colors = axs.pcolormesh(xi_sim,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
-  tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
-  #cbar = fig.colorbar(colors,ax=axs[0],ticks=tick_locations, format=ticker.LogFormatterMathtext())
-  #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')    
   axs.set_xlabel("$\\xi$ ($c/\omega_p$)")
-  axs.set_ylabel('$p_r$ ($m_e c$)')
+  axs.set_ylabel('$F_r$ ($m_e c \omega_p$)')
   
-  Btrack = trajectories[0]
+  track = trajectories[0]
   noBtrack = trajectories[1]
   Br = Btrack[0][:]
   Bxi = Btrack[1][:]
   Bpr = Btrack[2][:]
+  BF = Btrack[3][:]
   noBr = noBtrack[0][:]
   noBxi = noBtrack[1][:]
   noBpr = noBtrack[2][:]
-  axs.plot(Bxi,Bpr,'k',label="With B")
-  axs.plot(noBxi,noBpr,'c--',label="Without B")
+  noBF = noBtrack[3][:]
+  axs[0].plot(Bxi,Br,'k',label="Trajectory With B")
+  axs[0].plot(noBxi,noBr,'c--',label="Trajectory Without B")
+  axs[1].plot(Bxi,BF,'k',label="Force With B")
+  axs[1].plot(noBxi,noBF,'c--',label="Force Without B")
+  axs[0].legend()
+  axs[1].legend()
+  axs[0].set_xlim(4,6)#xi_sim[0], xi_sim[-1])
+  axs[1].set_xlim(4,6)#xi_sim[0], xi_sim[-1])
+  axs[0].set_ylim(0, 2)#r_sim[-1])
+  axs[0].set_title('Ionized Electron Trajectories, t = '+str(t0)+'$\omega_p^{-1}$')
+  plt.subplots_adjust(wspace=0, hspace=0)
+  fig.set_size_inches(8,10)
+  fn = "plots/"+fname+"_Btest.png"
+  plt.savefig(fn,dpi=300)
+  #plt.show()
+def plotFTest(fname,t0):
+    
+  fig, axs = plt.subplots()
+
+  axs.set_xlabel("$\\xi$ ($c/\omega_p$)")
+  axs.set_ylabel('$F_r$ ($m_e c \omega_p$)')
+  
+  track = trajectories[0]
+  r = track[0][:]
+  xi = track[1][:]
+  pr = track[2][:]
+  F = track[3][:]
+  F_model = track[4][:]
+  axs.set_xlim(xi[0]-1,xi[0])
+  #axs.set_ylim(0,1)
+  axs.plot(xi,F,'k',label="Simulation")
+  axs.plot(xi,F_model,'c--',label="Analytical Model")
+
+  #Linear Fit
+  idx = find_nearest_index(xi, xi[0]-1)
+  xi0 = xi[:idx]
+  pr0 = pr[:idx]
+  m,b = polyfit(xi0,pr0,1)
+  #axs.plot(xi, m*xi+b,'--c',label="Linear Fit")
+  axs.set_title('Transverse Force on Ionized Electron, t = '+str(t0)+'$\omega_p^{-1}$')
   axs.legend()
-  #axs.set_xlim(xi_sim[0], xi_sim[-1])
-  #axs.set_ylim(0, r_sim[-1])
-  axs.set_title('Ionized Electron Trajectories, t = '+str(t0)+'$\omega_p^{-1}$')
-  fn = "plots/"+fname+".png"
+  fn = "plots/"+fname+"_FrTest.png"
   plt.savefig(fn,dpi=300)
   #plt.show()
 def plotTest(fname,t0,percentCaptured):
