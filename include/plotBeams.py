@@ -56,13 +56,14 @@ def plot():
 
 
 def plotBeams():
-  dat = np.load('quickPIC/quickPIC_139.npz')
+  dat = np.load('ultrashort/quickPIC_139.npz')
   #xi = dat['xi']
   escaped = dat['esc']
   trail = dat['trail']
   drive = dat['drive']
   n = 0
   print("Captured Electrons = ", len(trail))
+  print((len(trail)*EC* 10**12),"pC of charge injected")
   fig, axs  = plt.subplots(2,sharex=True)
   E = Er 
   
@@ -92,14 +93,14 @@ def plotBeams():
   #axs[1].set_xlim(0,8)
   plt.xlim(0,8)
   
-  binwidth = (max(drive) - min(drive))/15.0
+  binwidth = (max(drive) - min(drive))/10.0
   nbins = int(round( (max(trail) - min(trail))/binwidth))
-  axs[1].hist(drive, bins = 15,color='red',label="Driving Beam")
+  axs[1].hist(drive, bins = 10,color='red',label="Driving Beam")
   axs[1].hist(trail, bins = nbins,color='blue',label="Trailing Beam")
   counts, bin_edges = np.histogram(trail,bins=nbins)
   axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
   axs[1].legend()
-  axs[1].set_ylim(None, counts.max()+20 )
+  #axs[1].set_ylim(None, counts.max()+20 )
   #plt.xlim(xi[0], xi[-1])
   fn = "capturedIonizedBeam_quickPIC_139.png"
   plt.savefig(fn,dpi=300,transparent=True)

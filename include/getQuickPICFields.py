@@ -38,6 +38,17 @@ def longE(fname):
 def phiB(fname):
   return np.flip(getField(fname),1)
 
+def getDepth(): 
+  f = h5.File('data/eyslicexz_00000000.h5',"r")
+  datasetNames = [n for n in f.keys()] #Two Datasets: AXIS and e2
+  field = datasetNames[-1]
+  Field_dat = f[field][:].astype(float)
+  a1_bounds = f['AXIS']['AXIS1']
+  a2_bounds = f['AXIS']['AXIS2']
+
+  xi_dat = np.linspace(a2_bounds[0] ,a2_bounds[1] ,len(Field_dat))
+  y_dat = np.linspace(a1_bounds[0],a1_bounds[1],len(Field_dat[0]))
+  return (y_dat[1] - y_dat[0])
 def spliceLowRes(fname):
   r, xi = axes(fname)
   field = getField(fname)

@@ -55,6 +55,8 @@ WP = np.sqrt(NP*EC**2/(M_E*EP_0))   #plasma frequency in 1/s
 r,xi, Er = quickPIC.spliceLowRes(Er_fname)
 r,xi, Ez = quickPIC.spliceLowRes(Ez_fname)
 r,xi, Bphi = quickPIC.spliceLowRes(Bphi_fname)
+dy = quickPIC.getDepth()
+
 
 
 def main():
@@ -71,40 +73,56 @@ def main():
   eCount = 0
   num = 0
   ionizedCount = 0
+  totIonFrac = 0
   capturedCount = 0
   print("Simulating t = ", t0)
-  eTot = 1#int(injCharge / EC) #number of electrons to inject 
+  eTot = int(injCharge / EC) #number of electrons to inject
+
   #print("Simulating ",eTot," injected electrons.")
   for j in range(int(ncols/4),ncols -1):
     for i in range(int(nrows/2),nrows -1):
       ratio = ionization.Wdt(i,j)
-      if ratio > 0.1:
+      if ratio > 0.01:
+        totIonFrac += ratio
         ionizedCount += 1
+  print(ionizedCount," pixels in ionization region.")
+  if ionizedCount > 0:
+    meanIonFrac = totIonFrac / ionizedCount
+    #Calculate volume of each pixel in SI units
+    pixVolume = dy * (xi[1] - xi[0]) * (r[1] - r[0]) * C / WP
+    pinchVolume = pixVolume * ionizedCount
+    # Calculate impurity density 
+    impDensity = (eTot / pinchVolume)/ (meanIonFrac * .6641)
+    print("Impurity density = ", impDensity," m^-3")
     
-  while eCount < eTot: 
-    if ionizedCount ==0:
-      break
-    #i = rand.randint(int(nrows/2),nrows-1)
+  #while eCount < eTot: 
+  else:
+    return
+  for j in range(int(ncols/4),ncols -1):
+    for i in range(int(nrows/2),nrows -1):
+            #i = rand.randint(int(nrows/2),nrows-1)
     #j = rand.randint(int(ncols/4),ncols-1)
-    r0 = 0.1#0.01 + (pinchR / eTot) * (eCount+1)
-    #ratio = ionization.Wdt(i,j) 
-    #if ratio > 0.1:
-    #prob = rand.uniform(0,1)
-    if True:#prob < ratio:
-      eCount += 1
-      if eCount > eTot:
-        break
-      escaped[i,j], xiPos = eTracks.GetTrajectory(r0,pinchXi,True)#r[i],xi[j])
+    #r0 = 0.1#0.01 + (pinchR / eTot) * (eCount+1)
+      ratio = ionization.Wdt(i,j) 
+      if ratio > 0.01:
+        ionCount = int(ratio * impDensity * pixVolume)
+        escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],xi[j],True)
+        for electron in range(ionCount):
+          print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
+          eCount += 1
+        #if eCount > eTot:
+          #break
+          #escaped[i,j], xiPos = eTracks.GetTrajectory(r[i],xi[j],True)
   #    escaped[i,j], xiPos = eTracks.GetTrajectory(r0,pinchXi,False)#r[i],xi[j])
-      if escaped[i,j] == 1 or escaped[i,j] == 2 :
-        capturedCount += 1
-        trailBeamProf.append(xiPos)
-        driveBeamProf.append(xi[j])
-      #print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
-  #np.savez(output_fname, r=r,xi=xi, esc=escaped, drive=driveBeamProf,trail=trailBeamProf)
+          if escaped[i,j] == 1 or escaped[i,j] == 2 :
+            capturedCount += 1
+            trailBeamProf.append(xiPos)
+            driveBeamProf.append(xi[j])
+        #print('Row ',i, "/",nrows,", Column ", int(j - ncols/2),"/",int(ncols/2)," : ",eCount," electrons", end="\r", flush=True)
+  np.savez(output_fname, r=r,xi=xi, esc=escaped, drive=driveBeamProf,trail=trailBeamProf)
   percentCaptured = 100 * capturedCount / eCount
-  eTracks.plotFTest(output_fname,t0)#,percentCaptured)
-  #eTracks.plotFieldTest(output_fname,t0,percentCaptured)
+  eTracks.plotTest(output_fname,t0,percentCaptured)
+  eTracks.plotMomentaTest(output_fname,t0,percentCaptured)
   #eTracks.plotNoBTest(output_fname,t0)
   #plot()
   print("\n Finished ")

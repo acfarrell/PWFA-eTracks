@@ -22,6 +22,7 @@ from .plotTracks import plot
 import include.plotPhaseSpace as phaseSpace
 
 trajectories = []
+momenta = [[],[]]
 
 #Definition of Constants
 M_E = 9.109e-31                   #electron rest mass in kg
@@ -128,7 +129,7 @@ def sigmaR():#z,dSigmaR):
 
 def GetTrajectory(r_0,xi_0, magBool):
   #returns array of r v. t
-  r_dat, z_dat, t_dat, xi_dat, vz_dat,pr_dat,F_dat, Fr_model = np.array([]), np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
+  r_dat, z_dat, t_dat, xi_dat, vz_dat,p_dat,pz_dat,pr_dat,F_dat, Fr_model = np.array([]),np.array([]),np.array([]), np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
   p = 0
   rn = r_0 # position in c/w_p
   pr = 0 # momentum in m_e c
@@ -170,6 +171,8 @@ def GetTrajectory(r_0,xi_0, magBool):
     vz_dat = np.append(vz_dat, vzn)
     xi_dat = np.append(xi_dat, xin)
     pr_dat = np.append(pr_dat, pr)
+    pz_dat = np.append(pz_dat, pz)
+    p_dat = np.append(p_dat, p)
     F_dat = np.append(F_dat,F)
     #print("z = ", zn)
     if rn > turnRad:
@@ -194,11 +197,15 @@ def GetTrajectory(r_0,xi_0, magBool):
       esc = 1
   xiPos = xin
   global trajectories
+  global momenta 
   data = [r_dat,xi_dat,pr_dat,F_dat, Fr_model]
   trajectories.append(data)  #print(esc)
-
+  if esc==2:
+    momenta[0] = [p_dat,pr_dat,pz_dat,r_dat,xi_dat]
+  if esc==-1:
+    momenta[1] = [p_dat,pr_dat,pz_dat,r_dat,xi_dat]#print(esc)
   trackName = "r0="+str(round(r_0,3))
-  phaseSpace.plot(r_dat,xi_dat,pr_dat, Er_sim,r_sim,xi_sim,trackName)
+  #phaseSpace.plot(r_dat,xi_dat,pr_dat, Er_sim,r_sim,xi_sim,trackName)
   del r_dat, xi_dat, z_dat, t_dat
   return esc, xiPos
 
@@ -326,9 +333,9 @@ def plotTest(fname,t0,percentCaptured):
     r = track[0][:]
     xi = track[1][:]
     p = track[2][:]
-    axs.plot(xi,r,color=rainbow[-i-1])#,linewidth=1)
-  axs.set_xlim(initXi - 1.5, initXi)#xi_sim[0], xi_sim[-1])
-  axs.set_ylim(0, 1)#r_sim[-1])
+    axs.plot(xi,r,'k', alpha=.25)#,linewidth=1)
+  axs.set_xlim(xi_sim[0], xi_sim[-1])
+  axs.set_ylim(0,r_sim[-1])
   fig.suptitle("Ionized Electron Trajectories")
   axs.set_title('t = '+str(round(t0,2))+'$\omega_p^{-1}$, '+str(round(percentCaptured,2))+'% electrons captured')
   fn = "plots/"+fname+"_rainbow.png"
@@ -363,3 +370,63 @@ def plotFieldTest(fname,t0,percentCaptured):
   fig.set_size_inches(12,8)
   plt.savefig(fn,dpi=300)
   #plt.show()
+
+def plotMomentaTest(fname,t0,percentCaptured):
+      
+  fig, axs = plt.subplots(3)
+  
+  axs[0].set_xlabel("captured $p$ ($m_e c$)")
+  axs[0].set_ylabel('escaped $p$ ($m_e c$)')
+  axs[1].set_xlabel("captured $p_r$ ($m_e c$)")
+  axs[1].set_ylabel('escaped $p_r$ ($m_e c$)')
+  axs[2].set_xlabel("captured $p_z$ ($m_e c$)")
+  axs[2].set_ylabel('escaped $p_z$ ($m_e c$)')
+  
+  track = momenta[0]
+  cap_p = track[0][:]
+  cap_pr = track[1][:]
+  cap_pz = track[2][:]
+  cap_r = track[3][:]
+  cap_xi = track[4][:]
+
+  track = momenta[1]
+  esc_p = track[0][:]
+  esc_pr = track[1][:]
+  esc_pz = track[2][:]
+  esc_r = track[3][:]
+  esc_xi = track[4][:]
+
+  axs[0].plot(cap_p[:len(esc_p)],esc_p,'k')
+  axs[1].plot(cap_pr[:len(esc_p)],esc_pr,'k')
+  axs[2].plot(cap_pz[:len(esc_p)],esc_pz,'k')
+  fig.suptitle("Escaped v. Captured Electron Momenta")
+  #axs.set_title('t = '+str(round(t0,2))+'$\omega_p^{-1}$, '+str(round(percentCaptured,2))+'% electrons captured')
+  fn = "plots/"+fname+"_momenta_CapvEsc.png"
+  plt.savefig(fn,dpi=300)
+  plt.show()
+  plt.close()
+
+  fig,axs = plt.subplots(2,sharex=True)
+  #Make color axis of electric field
+  colors = axs[0].pcolormesh(xi_sim,r_sim,Er_sim,norm=col.SymLogNorm(linthresh=0.03,linscale=0.03,vmin=-Er_sim.max(),vmax=Er_sim.max()),cmap="RdBu_r")
+  #tick_locations=[x*0.01 for x in range(2,10)]+ [x*0.01 for x in range(-10,-1)] + [x*0.1 for x in range(-10,10)] +[ x for x in range(-10,10)]
+  #cbar = fig.colorbar(colors,ax=axs[0],ticks=tick_locations, format=ticker.LogFormatterMathtext())
+  #cbar.set_label('$E_r$, Transverse Electric Field ($m_e c\omega_p / e$)')  
+
+  axs[0].plot(cap_xi,cap_r,'r',label="Captured $r(\\xi)$")
+  axs[0].plot(esc_xi,esc_r,'b',label="Escaped $r(\\xi)$")
+  axs[0].legend()
+  axs[1].plot(cap_xi,cap_p,'r',label="Captured $p(\\xi)$")
+  axs[1].plot(esc_xi,esc_p,'b',label="Escaped $p(\\xi)$")
+  axs[1].legend
+  axs[1].set_xlabel("$\\xi$ ($c/\omega_p$)")
+  axs[0].set_ylabel("$r$ ($c/\omega_p$)")
+  axs[0].set_ylim(0,4)
+  axs[0].set_xlim(0,8)
+  axs[1].set_xlim,(0,8)
+  axs[1].set_ylabel("$p$ ($m_e c$)")
+
+  fn = "plots/"+fname+"_trajectories_CapvEsc.png"
+  plt.savefig(fn,dpi=300)
+  plt.show()
+  phaseSpace.plotAll(trajectories)
